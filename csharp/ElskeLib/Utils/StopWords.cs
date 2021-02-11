@@ -147,7 +147,7 @@ namespace ElskeLib.Utils
             "thereafter", "thereby", "therefore", "therein", "theres", "thereupon", "these", "they", "they'd",
             "they'll", "they're", "they've", "they’d", "they’ll", "they’re", "they’ve", "theyve", "think", "third",
             "this", "thorough", "thoroughly", "those", "though", "three", "through", "throughout", "thru", "thus",
-            "time", "to", "today", "together", "too", "took", "toward", "towards", "tried", "tries", "truly", "try",
+            "time", "to", "today", "together", "told", "too", "took", "toward", "towards", "tried", "tries", "truly", "try",
             "trying", "twice", "two", "u", "un", "under", "unfortunately", "unless", "unlikely", "until", "unto", "up",
             "upon", "us", "use", "used", "useful", "uses", "using", "usually", "uucp", "v", "value", "various", "ve",
             "very", "via", "viz", "vs", "w", "want", "wants", "was", "wasn't", "wasn’t", "wasnt", "watch", "way", "we",

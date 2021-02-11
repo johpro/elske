@@ -199,6 +199,17 @@ namespace ElskeLib.Utils
             res.ReferenceCounts.DocCounts.RemoveEntriesBelowThreshold();
             res.ReferenceCounts.TotalCounts.RemoveEntriesBelowThreshold();
 
+            //word idx dict can also grow very large, reduce this by removing words that have occurred only once
+            for (int i = res.ReferenceIdxMap.IdxToWord.Count - 1; i >= 0; i--)
+            {
+                if (res.ReferenceCounts.TotalCounts.WordCounts.ContainsKey(i))
+                    break;
+
+                var s = res.ReferenceIdxMap.IdxToWord[i];
+                res.ReferenceIdxMap.IdxToWord.RemoveAt(i);
+                res.ReferenceIdxMap.WordToIdx.Remove(s);
+            }
+
             return res;
         }
 
