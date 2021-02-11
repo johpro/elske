@@ -36,6 +36,8 @@ from one or several such documents, you can do this:
 
 ```csharp
 var elske = KeyphraseExtractor.CreateFromFolder("/path/to/documents");
+//the use of a stop word list greatly improves results
+elske.StopWords = StopWords.EnglishStopWords;
 //extract the top 10 keyphrases of a single document
 var phrases = elske.ExtractPhrases("this is one document", 10);
 //extract the top 10 keyphrases of several documents

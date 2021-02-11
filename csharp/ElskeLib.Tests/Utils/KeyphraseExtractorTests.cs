@@ -27,6 +27,7 @@ namespace ElskeLib.Tests.Utils
             const string dir = "../../../../../datasets/SemEval2010/Task05-test+Keys/test";
             const string testFn = dir + "/H-16.txt.final";
             var elske = KeyphraseExtractor.CreateFromFolder(dir);
+            elske.StopWords = StopWords.EnglishStopWords;
             Assert.AreEqual(100, elske.ReferenceCounts.DocCounts.NumDocuments);
             var phrases = elske.ExtractPhrases(File.ReadAllText(testFn), 10);
             Assert.AreEqual(10, phrases.Count);

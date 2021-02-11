@@ -256,9 +256,9 @@ namespace ElskeLib.Utils
             "muß", "müssen", "musst", "mußt", "müsst", "müßt", "musste", "mussten", "n", "na", "nach", "nachdem",
             "nahm", "natürlich", "ne", "neben", "nein", "neue", "neuen", "neun", "neunte", "neunten", "neunter",
             "neuntes", "nicht", "nichts", "nie", "niemand", "niemandem", "niemanden", "nix", "noch", "nun", "nur", "o",
-            "ob", "oben", "oder", "offen", "oft", "oh", "ohne", "Ordnung", "p", "paar", "pro", "q", "r", "recht",
+            "ob", "oben", "oder", "offen", "oft", "oh", "ohne", "p", "paar", "pro", "q", "r", "recht",
             "rechte", "rechten", "rechter", "rechtes", "richtig", "rund", "s", "sa", "sache", "sagen", "sagt", "sagte",
-            "sah", "satt", "schlecht", "Schluss", "schon", "sechs", "sechste", "sechsten", "sechster", "sechstes",
+            "sah", "satt", "schlecht", "schon", "sechs", "sechste", "sechsten", "sechster", "sechstes",
             "sehen", "sehr", "sei", "seid", "seien", "sein", "seine", "seinem", "seinen", "seiner", "seines", "seit",
             "seitdem", "selbst", "sich", "sie", "sieben", "siebente", "siebenten", "siebenter", "siebentes", "sind",
             "so", "sogar", "solang", "solche", "solchem", "solchen", "solcher", "solches", "soll", "sollen", "sollst",
@@ -273,7 +273,8 @@ namespace ElskeLib.Utils
             "will", "willst", "wir", "wird", "wirklich", "wirst", "wo", "woher", "wohin", "wohl", "wollen", "wollt",
             "wollte", "wollten", "worden", "wurde", "würde", "wurden", "würden", "x", "y", "z", "z.b", "zehn", "zehnte",
             "zehnten", "zehnter", "zehntes", "zeit", "zu", "zuerst", "zugleich", "zum", "zunächst", "zur", "zurück",
-            "zusammen", "zwanzig", "zwar", "zwei", "zweite", "zweiten", "zweiter", "zweites", "zwischen", "zwölf"
+            "zusammen", "zwanzig", "zwar", "zwei", "zweite", "zweiten", "zweiter", "zweites", "zwischen", "zwölf",
+            "laut", "derzeit", "zudem", "000", "fast", "heißt", "bleiben", "klar", "bleibt", "meisten"
         };
 
         public static readonly HashSet<string> GermanStopWordsSet = GermanStopWords.ToHashSet();
@@ -466,13 +467,13 @@ namespace ElskeLib.Utils
 
         public static readonly string[] TwitterEnglishStopWords = 
             TwitterStopWords.Concat(EnglishStopWords)
-            .Concat(Enumerable.Range(0, 10).Select(i => i.ToString())).ToArray();
+            .Concat(Enumerable.Range(0, 32).Select(i => i.ToString())).ToArray();
 
 
         public static readonly string[] PunctuationStopWords =
             Tokenizer.PunctuationChars.Select(c => c.ToString()).ToArray();
 
 
-        public static readonly string[] DigitsStopWords = Enumerable.Range(0, 10).Select(i => i.ToString()).ToArray();
+        public static readonly string[] DigitsStopWords = Enumerable.Range(0, 32).Select(i => i.ToString()).ToArray();
     }
 }

@@ -102,7 +102,7 @@ namespace ElskeLib.Model
             if ((meta?.Version ?? -1) < 1)
                 throw new Exception("not a valid file");
 
-            var res = new UniBigramCounts{NumDocuments = meta.NumDocuments};
+            var res = new UniBigramCounts { NumDocuments = meta.NumDocuments };
 
             using (var reader = new BinaryReader(new BufferedStream(zip.GetEntry(entryPrefix + StorageBlobId).Open())))
             {
@@ -137,7 +137,7 @@ namespace ElskeLib.Model
 
         public double GetIdf(int wordIdx)
         {
-            return Math.Log(NumDocuments / (double) Math.Max(1, WordCounts.GetValueOrDefault(wordIdx)));
+            return Math.Log(NumDocuments / (double)Math.Max(1, WordCounts.GetValueOrDefault(wordIdx)));
         }
 
 
@@ -167,7 +167,7 @@ namespace ElskeLib.Model
                     {
                         foreach (var p in WordCounts)
                         {
-                            if(p.Value >= minCount)
+                            if (p.Value >= minCount)
                                 newDict.Add(p.Key, p.Value);
                         }
                     }
@@ -185,21 +185,24 @@ namespace ElskeLib.Model
                         numTermsBelowTh++;
                 }
 
-                if (numTermsBelowTh > 0)
+                var capacity = PairCounts.Count - numTermsBelowTh;
+                var newDict = new Dictionary<WordIdxBigram, int>(capacity);
+                if (capacity > 0)
                 {
-                    var capacity = PairCounts.Count - numTermsBelowTh;
-                    var newDict = new Dictionary<WordIdxBigram, int>(capacity);
-                    if (capacity > 0)
+                    foreach (var p in PairCounts)
                     {
-                        foreach (var p in PairCounts)
-                        {
-                            if (p.Value >= minCount)
-                                newDict.Add(p.Key, p.Value);
-                        }
+                        //we have to make sure to also delete bigrams that contain
+                        //a word which we removed in the previous step because
+                        //we might compact the idx reference map afterwards
+                        if (p.Value >= minCount &&
+                            (WordCounts == null ||
+                             WordCounts.ContainsKey(p.Key.Idx1) && WordCounts.ContainsKey(p.Key.Idx2)))
+                            newDict.Add(p.Key, p.Value);
                     }
-
-                    PairCounts = newDict;
                 }
+
+                PairCounts = newDict;
+
             }
         }
     }
