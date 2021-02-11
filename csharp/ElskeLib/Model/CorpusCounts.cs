@@ -136,20 +136,17 @@ namespace ElskeLib.Model
 
 
 
+
 #if SINGLE_CORE_ONLY
-        public static DocAndTermCounts GetTotalCountsOnly(IList<int[]> documents)
+       
+        public static CorpusCounts GetTotalCountsOnly(IEnumerable<int[]> documents)
         {
-            var res = new DocAndTermCounts();
+            var res = new CorpusCounts();
             var counts = res.TotalCounts;
 
-            counts.WordCounts.EnsureCapacity((int) (10 * Math.Sqrt(documents.Count)));
-            counts.PairCounts.EnsureCapacity(documents.Count);
-
-            for (int i = 0; i < documents.Count; i++)
+            foreach (var arr in documents)
             {
-                var arr = documents[i];
-
-                if(arr == null ||arr.Length == 0)
+                if (arr == null || arr.Length == 0)
                     continue;
 
                 counts.WordCounts.IncrementItem(arr[0]);
@@ -164,28 +161,55 @@ namespace ElskeLib.Model
             }
 
             return res;
-
-
         }
 #else
 
-        public static CorpusCounts GetTotalCountsOnly(IList<int[]> documents)
+
+        public static CorpusCounts GetTotalCountsOnly(IEnumerable<int[]> documents)
         {
             var countsLocal = new ThreadLocal<UniBigramCounts>(() => new UniBigramCounts(), true);
 
-            var rangePartitioner = Partitioner.Create(0, documents.Count);
-            Parallel.ForEach(rangePartitioner, (range, state) =>
+            int count = 0;
+            if (documents is IList<int[]> documentsList)
             {
-                var counts = countsLocal.Value;
-                counts.WordCounts.EnsureCapacity((int)(10 * Math.Sqrt(range.Item2 - range.Item1)));
-                counts.PairCounts.EnsureCapacity(range.Item2 - range.Item1);
-
-                for (int i = range.Item1; i < range.Item2; i++)
+                //we can use more efficient range-based multi-threading if it is a list
+                count = documentsList.Count;
+                var rangePartitioner = Partitioner.Create(0, documentsList.Count);
+                Parallel.ForEach(rangePartitioner, (range, state) =>
                 {
-                    var arr = documents[i];
+                    var counts = countsLocal.Value;
+                    counts.WordCounts.EnsureCapacity((int) (10 * Math.Sqrt(range.Item2 - range.Item1)));
+                    counts.PairCounts.EnsureCapacity(range.Item2 - range.Item1);
 
+                    for (int i = range.Item1; i < range.Item2; i++)
+                    {
+                        var arr = documentsList[i];
+
+                        if (arr == null || arr.Length == 0)
+                            continue;
+
+                        counts.WordCounts.IncrementItem(arr[0]);
+
+                        for (int j = 1; j < arr.Length; j++)
+                        {
+                            var val = arr[j];
+                            counts.WordCounts.IncrementItem(val);
+                            var pair = new WordIdxBigram(arr[j - 1], val);
+                            counts.PairCounts.IncrementItem(pair);
+                        }
+                    }
+
+                });
+            }
+            else
+            {
+                Parallel.ForEach(documents, arr =>
+                {
                     if (arr == null || arr.Length == 0)
-                        continue;
+                        return;
+
+                    Interlocked.Increment(ref count);
+                    var counts = countsLocal.Value;
 
                     counts.WordCounts.IncrementItem(arr[0]);
 
@@ -196,9 +220,8 @@ namespace ElskeLib.Model
                         var pair = new WordIdxBigram(arr[j - 1], val);
                         counts.PairCounts.IncrementItem(pair);
                     }
-                }
-                
-            });
+                });
+            }
 
 
 
@@ -209,7 +232,7 @@ namespace ElskeLib.Model
 
 
             res.TotalCounts = values[0];
-            res.TotalCounts.NumDocuments = documents.Count;
+            res.TotalCounts.NumDocuments = count;
             if (values.Count == 1)
                 return res;
 

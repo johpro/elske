@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using ElskeLib.Model;
@@ -19,7 +20,7 @@ namespace ElskeLib.Tests.Utils
     [TestClass()]
     public class KeyphraseExtractorTests
     {
-        
+
         [TestMethod()]
         public void CreateFromFolderTest()
         {
@@ -56,7 +57,7 @@ namespace ElskeLib.Tests.Utils
                 File.Delete(tmpFn);
             }
         }
-        
+
 
 
         [TestMethod]
@@ -122,11 +123,10 @@ namespace ElskeLib.Tests.Utils
         {
             const bool useUniqueTweetsOnly = false;
 
-            
+
             var fn = @"../../../../../datasets/twitter/20-02-12__tweets_en.csv.gz";
-            
+
             var extractor = KeyphraseExtractor.FromFile("../../../../../models/en-twitter.elske");
-            extractor.OverhangTfIdfThresholdFactor = 0.1;
 
             var avgTweetsPerHour = 15_000_000 / 24;
             var noLocalTweets = 1_000_000; // 5 * avgTweetsPerHour / 2;
@@ -155,7 +155,7 @@ namespace ElskeLib.Tests.Utils
 
 
             }
-            
+
 
             Trace.WriteLine($"{localSentences.Length} sentences in local collection, {added} added");
             Trace.WriteLine("top 50");
@@ -191,7 +191,39 @@ namespace ElskeLib.Tests.Utils
             extractor.UsePfIdf = true;
 
             ShowRes(extractor, localSentences);
+
+        }
+
+
+        [TestMethod()]
+        public void ExtractPhrasesOnlineTest()
+        {
+            var fn = @"../../../../../datasets/twitter/20-02-12__tweets_en.csv.gz";
+
+            var extractor = KeyphraseExtractor.FromFile("../../../../../models/en-twitter.elske");
+
+            var avgTweetsPerHour = 15_000_000 / 24;
+            var noLocalTweets = 1_000_000;
+
+            var m = 0;
+
+            var docs = FileReader.ReadLines(fn)
+                .Skip(6 * avgTweetsPerHour)
+                .Take(noLocalTweets)
+                .Select(l =>
+                {
+                    m++; //to check number of enumerations later on
+                    return l.Substring(l.LastIndexOf('\t') + 1);
+                });
             
+            var res = extractor.ExtractPhrases(docs, 50, true);
+
+            Trace.WriteLine(string.Join(", ", res
+                .Select(r => $"{r.Phrase} ({r.TermFrequency})")));
+            
+            Assert.AreEqual(50, res.Count);
+            Assert.AreEqual(2*noLocalTweets, m);
+
         }
 
     }

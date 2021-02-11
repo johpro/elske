@@ -18,6 +18,7 @@ namespace ElskeLib.Model
         /// exact document frequencies of phrases
         /// </summary>
         public bool BuildReferenceCollection { get; set; }
+        
 
     }
 }

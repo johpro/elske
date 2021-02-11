@@ -129,7 +129,7 @@ namespace ElskeLib.Utils
             var entry = zip.CreateEntry(entryPrefix + StorageMetaId);
             using (var entryStream = new StreamWriter(entry.Open()))
                 entryStream.Write(metaStr);
-            
+
         }
 
 
@@ -184,7 +184,7 @@ namespace ElskeLib.Utils
 
             var res = new KeyphraseExtractor
             {
-                ReferenceIdxMap = new WordIdxMap {TokenizationSettings = settings.TokenizationSettings},
+                ReferenceIdxMap = new WordIdxMap { TokenizationSettings = settings.TokenizationSettings },
                 ReferenceDocuments = settings.BuildReferenceCollection ? new BigramDocumentIndex() : null
             };
 
@@ -261,25 +261,42 @@ namespace ElskeLib.Utils
         /// </summary>
         /// <param name="documents">collection of documents</param>
         /// <param name="numTopPhrases">maximum number of keyphrases to extract</param>
+        /// <param name="processOnline">if true then the documents will be processed online, which uses less memory
+        ///  but is also slower (less multi-threading, documents will be enumerated and converted twice)</param>
         /// <returns></returns>
-        public List<PhraseResult> ExtractPhrases(IEnumerable<string> documents, int numTopPhrases)
+        public List<PhraseResult> ExtractPhrases(IEnumerable<string> documents, int numTopPhrases, bool processOnline = false)
         {
-            int[][] tokenizedDocs;
-            lock (ReferenceIdxMap)
-            { //we may add words to idx map so we have to make sure that no one else is accessing it at the same time
-                tokenizedDocs = documents.Select(doc => ReferenceIdxMap.DocumentToIndexes(doc).ToArray()).ToArray();
+            if (processOnline)
+            {
+                var query = documents.Select(doc =>
+                {
+                    var tokens = ReferenceIdxMap.TokenizeDocument(doc).ToArray();
+                    lock (ReferenceIdxMap)
+                        return ReferenceIdxMap.TokensToIndexes(tokens);
+                });
+
+                return ExtractPhrases(query, numTopPhrases);
             }
 
-            return ExtractPhrases(tokenizedDocs, numTopPhrases);
+            int[][] arr;
+
+            lock (ReferenceIdxMap)
+            {
+                arr = documents.Select(doc => ReferenceIdxMap.DocumentToIndexes(doc).ToArray()).ToArray();
+            }
+
+            return ExtractPhrases(arr, numTopPhrases);
         }
 
         /// <summary>
         /// Extract keyphrases from the given collection of tokenized documents.
         /// </summary>
-        /// <param name="documents">collection of tokenized documents</param>
+        /// <param name="documents">collection of tokenized documents.
+        /// It will be faster if this is a list-like structure.
+        /// Will be enumerated twice.</param>
         /// <param name="numTopPhrases">maximum number of keyphrases to extract</param>
         /// <returns></returns>
-        public List<PhraseResult> ExtractPhrases(IList<int[]> documents, int numTopPhrases)
+        public List<PhraseResult> ExtractPhrases(IEnumerable<int[]> documents, int numTopPhrases)
         {
             var stopWords = StopWords == null ? new HashSet<int>() : new HashSet<int>(StopWords.Select(w => ReferenceIdxMap.WordToIdx.GetValueOrDefault(w, -1))
                 .Where(idx => idx >= 0));
@@ -359,7 +376,7 @@ namespace ElskeLib.Utils
 
                 foreach (var p in localCounts.TotalCounts.PairCounts)
                 {
-                    if(stopWords.Contains(p.Key.Idx1) || stopWords.Contains(p.Key.Idx2))
+                    if (stopWords.Contains(p.Key.Idx1) || stopWords.Contains(p.Key.Idx2))
                         continue;
 
                     if (wordToHighestBigramCount.TryGetValue(p.Key.Idx1, out var count))
@@ -398,7 +415,7 @@ namespace ElskeLib.Utils
                 if (wordToHighestBigramCount != null &&
                     wordToHighestBigramCount.TryGetValue(p.Key, out var bigramCount))
                 {
-                    if (bigramCount >= p.Value/2)
+                    if (bigramCount >= p.Value / 2)
                     {
                         //term appears in majority of cases with another term
                         //do not use count for determining threshold
@@ -439,7 +456,7 @@ namespace ElskeLib.Utils
                     if (numStopwords == 2)
                         continue;
 
-                    if(numStopwords == 1 && p.Value <= 2)
+                    if (numStopwords == 1 && p.Value <= 2)
                         continue;
 
                     if (MinNumCharacters > 1 &&
@@ -448,7 +465,7 @@ namespace ElskeLib.Utils
                         continue; //at least one word has to meet min no chars requirement
 
                     var tfIdf = TransformTf(p.Value) * GetIdf(p.Key);
-                    if(tfIdf < uniTfidfTh)
+                    if (tfIdf < uniTfidfTh)
                         continue;
 
                     pairTfIdfs.Add((p.Key, tfIdf));
@@ -644,7 +661,7 @@ namespace ElskeLib.Utils
                     patternsTfIdf.Add(new WordSequence(new[] { t.Item1.Idx1, t.Item1.Idx2 }), t.Item2);
                 }
             }
-            
+
 
             var noLongerWordSequencesAdded = 0;
 
@@ -653,7 +670,7 @@ namespace ElskeLib.Utils
 
                 foreach (var p in phraseCandidateWordSequencesDocCount)
                 {
-                    var idf = Math.Log(ReferenceCounts.DocCounts.NumDocuments / (double) Math.Max(1, p.Value));
+                    var idf = Math.Log(ReferenceCounts.DocCounts.NumDocuments / (double)Math.Max(1, p.Value));
                     var tf = phraseCandidates[p.Key];
 
                     var tfidf = TransformTf(tf) * idf;
@@ -784,7 +801,7 @@ namespace ElskeLib.Utils
 
                         if (toRemoveSet.Contains(baseItem))
                             continue;
-                        
+
                         if (baseItem.Indexes.Length <= 1) continue;
 
                         //for the Full mode, we look at special cases with 2,3 or 4 terms, but which
@@ -813,10 +830,10 @@ namespace ElskeLib.Utils
                 foreach (var branch in hierarchy)
                 {
                     var baseItem = branch[0];
-                    
+
                     if (branch.Count <= 1)
                         continue;
-                    
+
                     for (int i = 1; i < branch.Count; i++)
                     {
                         var longerItem = branch[i];
@@ -858,7 +875,7 @@ namespace ElskeLib.Utils
                              (!stopWords.Contains(longerItem.Indexes[0]) || !stopWords.Contains(longerItem.Indexes[1]))))
                         {
                             //new words left to original word are not all stop words
-                            
+
                             var tfidf = GetTermOrPairTfIdf(longerItem.Indexes[0],
                                 startIdx <= 1 ? -1 : longerItem.Indexes[1]);
 
@@ -902,7 +919,7 @@ namespace ElskeLib.Utils
 
                     }
                 }
-                
+
 
                 if (Mode >= ExtractingMode.Full)
                 {
@@ -917,12 +934,12 @@ namespace ElskeLib.Utils
                     {
                         if (branch.Count <= 1)
                             continue;
-                        
+
                         var baseItem = branch[0];
 
                         if (toRemoveSet.Contains(baseItem))
                             continue;
-                        
+
                         patternsToIgnore.Clear();
                         currentPatterns.Clear();
 
@@ -1050,7 +1067,7 @@ namespace ElskeLib.Utils
                     .Select(p => new PhraseResult(p.Key, patternsTf[p.Key], p.Value,
                         p.Key.ToString(ReferenceIdxMap.IdxToWord))).ToList();
             }
-            
+
         }
 
         private static int GetNumStopWords(int[] indexes, HashSet<int> stopWords)
@@ -1190,47 +1207,49 @@ namespace ElskeLib.Utils
         }
 
 
-        private Dictionary<WordSequence, int> GetPhraseCandidates(IList<int[]> sentences, CorpusCounts localCounts,
+        private Dictionary<WordSequence, int> GetPhraseCandidates(IEnumerable<int[]> sentences, CorpusCounts localCounts,
             int minTfTh, HashSet<int> stopWords)
         {
-            var phraseCandidatesLocal = new ThreadLocal<Dictionary<WordSequence, int>>(() => new Dictionary<WordSequence, int>(), true);
+
             var patternRecycling = new WordSequenceRecycler();
 
-
-            var patternTempLocal = new ThreadLocal<FastClearList<int>>(() => new FastClearList<int>());
-
-
-#if SINGLE_CORE_ONLY
-            var patternTemp = patternTempLocal.Value;
-            var phraseCandidates = phraseCandidatesLocal.Value;
-            for (int k = 0; k < sentences.Count; k++)
-#else
-            var rangePartitioner = Partitioner.Create(0, sentences.Count);
-            Parallel.ForEach(rangePartitioner, (range, state) =>
+            void ProcessDocument(Dictionary<WordSequence, int> phraseCandidates, FastClearList<int> patternTemp, int[] arr)
             {
-                var patternTemp = patternTempLocal.Value;
-                var phraseCandidates = phraseCandidatesLocal.Value;
-                for (int k = range.Item1; k < range.Item2; k++)
-#endif
+                var lim = arr.Length - 2;
+
+                for (int i = 0; i < lim; i++)
                 {
+                    patternTemp.Clear();
+                    var onlyStopWords = true;
+                    var numNonStopWords = 0;
 
+                    var val = arr[i];
+                    patternTemp.Add(val);
 
-                    var arr = sentences[k];
-
-                    var lim = arr.Length - 2;
-
-
-                    for (int i = 0; i < lim; i++)
+                    if (!stopWords.Contains(val))
                     {
-                        patternTemp.Clear();
-                        var onlyStopWords = true;
-                        var numNonStopWords = 0;
+                        onlyStopWords = false;
+                        numNonStopWords++;
+                    }
 
-                        var val = arr[i];
+                    for (int j = i + 1; j < arr.Length; j++)
+                    {
+                        var maxTf = localCounts.TotalCounts.PairCounts.GetValueOrDefault(
+                            new WordIdxBigram(arr[j - 1], arr[j]), 1);
 
+
+                        if (maxTf < minTfTh || patternTemp.Count >= MaxNumWords)
+                        {
+                            //bigram at pos j-1 is too rare or max length reached
+                            break;
+                        }
+
+                        if (maxTf < 3 && numNonStopWords != patternTemp.Count)
+                            break; //
+
+
+                        val = arr[j];
                         patternTemp.Add(val);
-
-
 
                         if (!stopWords.Contains(val))
                         {
@@ -1238,57 +1257,58 @@ namespace ElskeLib.Utils
                             numNonStopWords++;
                         }
 
+                        if (onlyStopWords || patternTemp.Count < 3)
+                            continue;
 
-                        for (int j = i + 1; j < arr.Length; j++)
-                        {
-                            var maxTf = localCounts.TotalCounts.PairCounts.GetValueOrDefault(
-                                new WordIdxBigram(arr[j - 1], arr[j]), 1);
+                        var hashCode = (int)patternTemp.ToFnv1_32();
+                        var pattern = patternRecycling.RetrieveOrCreate(hashCode, patternTemp);
 
-
-                            if (maxTf < minTfTh || patternTemp.Count >= MaxNumWords)
-                            {
-                                //bigram at pos j-1 is too rare or max length reached
-                                break;
-                            }
-
-                            if (maxTf < 3 && numNonStopWords != patternTemp.Count)
-                                break; //
-
-
-                            val = arr[j];
-                            patternTemp.Add(val);
-
-                            if (!stopWords.Contains(val))
-                            {
-                                onlyStopWords = false;
-                                numNonStopWords++;
-                            }
-
-                            if (onlyStopWords || patternTemp.Count < 3)
-                                continue;
-
-
-
-                            var hashCode = (int)patternTemp.ToFnv1_32();
-                            var pattern = patternRecycling.RetrieveOrCreate(hashCode, patternTemp);
-
-#if SINGLE_CORE_ONLY
-#else
-                            //lock (phraseCandidates)
-#endif
-                            {
-                                phraseCandidates.IncrementItem(pattern);
-                            }
-                        }
-
+                        phraseCandidates.IncrementItem(pattern);
                     }
-#if SINGLE_CORE_ONLY
-            }
-#else
                 }
-            });
-#endif
+            }
 
+
+#if SINGLE_CORE_ONLY
+
+            var patternTemp = new FastClearList<int>();
+            var phraseCandidates = new Dictionary<WordSequence, int>();
+
+            foreach (var arr in sentences)
+            {
+                ProcessDocument(phraseCandidates, patternTemp, arr);
+            }
+
+            return phraseCandidates;
+#else
+
+            var phraseCandidatesLocal = new ThreadLocal<Dictionary<WordSequence, int>>(() => new Dictionary<WordSequence, int>(), true);
+            var patternTempLocal = new ThreadLocal<FastClearList<int>>(() => new FastClearList<int>());
+
+            if (sentences is IList<int[]> sentencesList)
+            {
+                //we can use range-based multi-threading if we have list-like structure
+                var rangePartitioner = Partitioner.Create(0, sentencesList.Count);
+                Parallel.ForEach(rangePartitioner, (range, state) =>
+                {
+                    var patternTemp = patternTempLocal.Value;
+                    var phraseCandidates = phraseCandidatesLocal.Value;
+                    for (int k = range.Item1; k < range.Item2; k++)
+                    {
+                        var arr = sentencesList[k];
+                        ProcessDocument(phraseCandidates, patternTemp, arr);
+                    }
+                });
+            }
+            else
+            {
+                Parallel.ForEach(sentences, arr =>
+                {
+                    var patternTemp = patternTempLocal.Value;
+                    var phraseCandidates = phraseCandidatesLocal.Value;
+                    ProcessDocument(phraseCandidates, patternTemp, arr);
+                });
+            }
 
             var values = phraseCandidatesLocal.Values;
             if (values.Count == 0)
@@ -1309,6 +1329,9 @@ namespace ElskeLib.Utils
             }
 
             return res;
+
+#endif
+
         }
 
 
