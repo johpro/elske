@@ -28,7 +28,6 @@ namespace ElskeLib.Tests.Utils
             const string testFn = dir + "/H-16.txt.final";
             var elske = KeyphraseExtractor.CreateFromFolder(dir);
             Assert.AreEqual(100, elske.ReferenceCounts.DocCounts.NumDocuments);
-            Assert.AreEqual(100, elske.ReferenceCounts.TotalCounts.NumDocuments);
             var phrases = elske.ExtractPhrases(File.ReadAllText(testFn), 10);
             Assert.AreEqual(10, phrases.Count);
 
@@ -43,7 +42,6 @@ namespace ElskeLib.Tests.Utils
                 elske.ToFile(tmpFn);
                 elske = KeyphraseExtractor.FromFile(tmpFn);
                 Assert.AreEqual(100, elske.ReferenceCounts.DocCounts.NumDocuments);
-                Assert.AreEqual(100, elske.ReferenceCounts.TotalCounts.NumDocuments);
                 var phrases2 = elske.ExtractPhrases(File.ReadAllText(testFn), 10);
                 Assert.AreEqual(10, phrases.Count);
                 for (int i = 0; i < phrases.Count; i++)

@@ -42,7 +42,42 @@ namespace ElskeLib.Model
             return res;
         }
 
-       
+
+        public static CorpusCounts GetDocCounts(IEnumerable<IEnumerable<int>> documents)
+        {
+            var res = new CorpusCounts();
+            var hashset = new HashSet<int>();
+            var hashsetPairs = new HashSet<WordIdxBigram>();
+
+            var count = 0;
+
+            foreach (var doc in documents)
+            {
+                hashset.Clear();
+                hashsetPairs.Clear();
+                var prevWord = -1;
+                foreach (var word in doc)
+                {
+                    if (hashset.Add(word))
+                        res.DocCounts.WordCounts.IncrementItem(word);
+
+                    if (prevWord != -1)
+                    {
+                        var pair = new WordIdxBigram(prevWord, word);
+                        if (hashsetPairs.Add(pair))
+                            res.DocCounts.PairCounts.IncrementItem(pair);
+                    }
+                    prevWord = word;
+                }
+
+                count++;
+            }
+            
+            res.DocCounts.NumDocuments = count;
+
+            return res;
+
+        }
 
         public static CorpusCounts GetCounts(IEnumerable<IEnumerable<int>> documents)
         {

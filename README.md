@@ -28,6 +28,29 @@ competitively on traditional keyword extraction benchmarks.
 
 ## Quick Start
 
+ELSKE needs a set of sample documents (the *reference collection*)
+which it will use to learn the weights of the terms based on how
+frequent they usually are. For example, if you have a bunch of
+text files in the folder `/path/to/documents` and you want to extract keyphrases
+from one or several such documents, you can do this:
+
+```csharp
+var elske = KeyphraseExtractor.CreateFromFolder("/path/to/documents");
+//extract the top 10 keyphrases of a single document
+var phrases = elske.ExtractPhrases("this is one document", 10);
+//extract the top 10 keyphrases of several documents
+var docs = new[]{"this is one document", "this is another"};
+phrases = elske.ExtractPhrases(docs, 10);
+```
+
+Instead of building the model from your own data, you can also download and use one of the provided [models](models).
+This is an example with one that was created from English news articles:
+
+```csharp
+var elske = KeyphraseExtractor.FromFile("en-news.elske");
+var phrases = elske.ExtractPhrases("this is an article", 10);
+```
+
 ## How Does It Work?
 
 Based on the number of top keyphrases you want to extract,

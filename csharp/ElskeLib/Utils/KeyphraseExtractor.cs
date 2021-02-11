@@ -195,14 +195,13 @@ namespace ElskeLib.Utils
                 return tokens;
             });
 
-            res.ReferenceCounts = CorpusCounts.GetCounts(docs);
+            res.ReferenceCounts = CorpusCounts.GetDocCounts(docs);
             res.ReferenceCounts.DocCounts.RemoveEntriesBelowThreshold();
-            res.ReferenceCounts.TotalCounts.RemoveEntriesBelowThreshold();
 
             //word idx dict can also grow very large, reduce this by removing words that have occurred only once
             for (int i = res.ReferenceIdxMap.IdxToWord.Count - 1; i >= 0; i--)
             {
-                if (res.ReferenceCounts.TotalCounts.WordCounts.ContainsKey(i))
+                if (res.ReferenceCounts.DocCounts.WordCounts.ContainsKey(i))
                     break;
 
                 var s = res.ReferenceIdxMap.IdxToWord[i];
