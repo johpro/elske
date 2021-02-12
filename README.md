@@ -32,7 +32,7 @@ ELSKE needs a set of sample documents (the *reference collection*)
 which it will use to learn the weights of the terms based on how
 frequent they usually are. For example, if you have a bunch of
 text files in the folder `/path/to/documents` and you want to extract keyphrases
-from one or several such documents, you can do this:
+from one or several such documents, you could do the following:
 
 ```csharp
 var elske = KeyphraseExtractor.CreateFromFolder("/path/to/documents");
@@ -61,7 +61,7 @@ efficiently without having to rely on computationally more expensive techniques 
 It scores and ranks these candidates according to the PF-IDF scheme,
 which is an adjusted version of the popular TF-IDF scheme
 that has been adapted to the analysis of larger documents or document collections.
-If you want to find out more about how ELSKE works, you can read the paper at ...
+If you want to find out more about how ELSKE works, you can read this [paper](https://arxiv.org/abs/2102.05700).
 
 ## Reference
 
@@ -71,7 +71,7 @@ Please cite the following paper when you use ELSKE in your work:
 @article{Knittel21Elske,
   title={ELSKE: Efficient Large-Scale Keyphrase Extraction},
   author={Knittel, Johannes and Koch, Steffen and Ertl, Thomas},
-  journal={arXiv preprint arXiv:2009.xxx},
+  journal={arXiv preprint arXiv:2102.05700},
   year={2021}
 }
 ```
