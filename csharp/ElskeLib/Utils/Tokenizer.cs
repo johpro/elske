@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace ElskeLib.Utils
 {
@@ -34,6 +35,8 @@ namespace ElskeLib.Utils
 
         public static readonly HashSet<char> PunctuationCharsSet = new HashSet<char>(PunctuationChars);
 
+        
+        public static readonly HashSet<int> EmojisUtf32Set = new HashSet<int>(EmojiHelper.ListOfEmojisUtf32);
 
 
 
@@ -202,6 +205,14 @@ namespace ElskeLib.Utils
             return src.SplitSpaces().Tokenize();
         }
 
+
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+        private static bool IsVariationSelector(char chr)
+        {
+            return chr >= 65024 && chr <= 65039;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static IEnumerable<string> Tokenize(this IEnumerable<string> src)
         {
             foreach (var s in src)
@@ -210,6 +221,36 @@ namespace ElskeLib.Utils
                 for (int i = 0; i < s.Length; i++)
                 {
                     var chr = s[i];
+
+                    if (chr >= 8205)
+                    {
+                        //could be double- OR single-char emoji
+                        //sometimes single-char emoji can still be transformed with variation selector afterwards
+                        var val = char.ConvertToUtf32(s, i);
+                        if (EmojisUtf32Set.Contains(val))
+                        {
+                            //it is an emoji
+                            if (startIdx >= 0)
+                            {
+                                yield return s.AsSpan(startIdx, i - startIdx).ToString();
+                            }
+
+
+                            var len = chr >= 55296 /*high surrogate start*/ ? 2 : 1;
+
+                            var nextI = i + len;
+                            if (nextI < s.Length && IsVariationSelector(s[nextI]))
+                                len++;
+                            
+                            yield return s.AsSpan(i, len).ToString();
+                            startIdx = -1;
+                            i+= len-1;
+                            continue;
+                        }
+                    }
+
+                  
+
                     if (PunctuationCharsSet.Contains(chr))
                     {
                         if (i > 0 && i < s.Length - 1 && Array.IndexOf(SpecialPunctuationChars, chr) != -1

@@ -107,6 +107,18 @@ namespace ElskeLib.Tests.Utils
                 res);
         }
 
+        [TestMethod]
+        public void TokenizeEmojiTest()
+        {
+            var testString = "‼️OMG‼️ you have to see this!!! 😠😠 never,🦣 ever expected this😥";
+            var expected = "‼️|OMG|‼️|you|have|to|see|this|!|!|!|😠|😠|never|,|🦣|ever|expected|this|😥";
+            var res = string.Join('|', testString.Tokenize());
+            
+            Trace.WriteLine(res);
+            
+            Assert.AreEqual(expected, res);
+        }
+
         [TestMethod()]
         public void ToLowerInvariantTest()
         {
