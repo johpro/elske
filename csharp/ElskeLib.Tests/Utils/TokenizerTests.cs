@@ -32,6 +32,7 @@ namespace ElskeLib.Tests.Utils
             "“I am urging people to leave the area to enable emergency services to treat the injured people.”\r\n\r\n" +
             "Pictures taken earlier on Saturday showed the beach busy as the public were reminded to practise " +
             "physical distancing in the good weather following the relaxation of coronavirus lockdown restrictions.";
+        
 
         [TestMethod()]
         public void SplitSpacesTest()
@@ -116,6 +117,26 @@ namespace ElskeLib.Tests.Utils
             
             Trace.WriteLine(res);
             
+            Assert.AreEqual(expected, res);
+
+            testString =
+                "“I mentioned Colin in the team talk and that game was for him and all he’s done for our" +
+                " football club in a number of facets over a number of years. It’s a great three points and " +
+                "we’re delighted to be able to dedicate them to him.”️ Ian McCall\r\n" +
+                "Lotto, Euromillionen oder Eurojackpot - wo der Unterschied liegt, berichtet Merkur.de*.\r\n\r\n" +
+                "* Merkur.de ist Teil des bundesweiten Ippen - Digital - Redaktionsnetzwerks.\r\n\r\n" +
+                "Rubriklistenbild: © picture alliance / dpa / Andrew Milligan";
+            
+            res = string.Join('|', testString.Tokenize());
+            expected =
+                "“|I|mentioned|Colin|in|the|team|talk|and|that|game|was|for|him|and|all|" +
+                "he|’|s|done|for|our|football|club|in|a|number|of|facets|over|a|number|of|years|.|" +
+                "It|’|s|a|great|three|points|and|we’re|delighted|to|be|able|to|dedicate|them|to|him|" +
+                ".|”|Ian|McCall|Lotto|,|Euromillionen|oder|Eurojackpot|-|wo|der|Unterschied|liegt|," +
+                "|berichtet|Merkur|.|de|*|.|*|Merkur|.|de|ist|Teil|des|bundesweiten|Ippen|-|Digital|" +
+                "-|Redaktionsnetzwerks|.|Rubriklistenbild|:|©|picture|alliance|/|dpa|/|Andrew|Milligan";
+            Trace.WriteLine(res);
+
             Assert.AreEqual(expected, res);
         }
 

@@ -36,7 +36,7 @@ namespace ElskeLib.Utils
         public static readonly HashSet<char> PunctuationCharsSet = new HashSet<char>(PunctuationChars);
 
         
-        public static readonly HashSet<int> EmojisUtf32Set = new HashSet<int>(EmojiHelper.ListOfEmojisUtf32);
+        public static readonly HashSet<int> EmojisUtf32Set = new(EmojiHelper.ListOfEmojisUtf32);
 
 
 
@@ -221,11 +221,15 @@ namespace ElskeLib.Utils
                 for (int i = 0; i < s.Length; i++)
                 {
                     var chr = s[i];
-
-                    if (chr >= 8205)
+                    if(IsVariationSelector(chr))
+                        continue;//make sure that new token does not start with variation selector
+                    
+                    if (chr >= 8205 && chr <= 12953 || chr >= 55356 && chr <= 56128)
                     {
                         //could be double- OR single-char emoji
                         //sometimes single-char emoji can still be transformed with variation selector afterwards
+
+                        //warning: ConvertToUtf32 fails if current char is low surrogate char
                         var val = char.ConvertToUtf32(s, i);
                         if (EmojisUtf32Set.Contains(val))
                         {

@@ -2,12 +2,12 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <Version>1.1.29</Version>
+    <Version>1.1.30</Version>
     <Authors>Johannes Knittel</Authors>
     <Product>ELSKE</Product>
 	<Title>ELSKE</Title>
-	<Summary>ELSKE is a library that extracts relevant keyphrases from text sources</Summary>
-	<Description>Efficient Large-Scale Keyphrase Extraction. ELSKE is a library that extracts important keyphrases from text sources. It aims at providing an efficient implementation for extracting keyphrases from both individual documents and (micro-)document collections such as tweets.</Description>
+	<Summary>ELSKE is a library that extracts relevant keywords and keyphrases from text sources</Summary>
+	<Description>Efficient Large-Scale Keyphrase Extraction. ELSKE is a library that extracts relevant keywords and keyphrases from text sources. It aims at providing an efficient implementation for extracting keyphrases from both individual documents and (micro-)document collections such as tweets.</Description>
     <Copyright>Copyright(c) 2021 Johannes Knittel</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/johpro/elske</RepositoryUrl>
