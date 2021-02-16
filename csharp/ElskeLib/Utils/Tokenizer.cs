@@ -15,16 +15,19 @@ namespace ElskeLib.Utils
     {
         public static readonly char[] SpaceDelimiters =
         {
-            ' ', ' ' /*this is the no-break space, &nbsp;*/, '\r', '\n', '\t', '\v', '\u008a', '	'
+            ' ', ' ' /*this is the no-break space, &nbsp;*/, '\r', '\n', '\t', '\v', '\u008a', '	',
+            '\u2000','\u2001','\u2002','\u2003','\u2004','\u2005','\u2006','\u2007','\u2008','\u2009',
+            '\u200a', '\u202f', '\u205f', '\u3000'
         };
 
-        public static readonly HashSet<char> SpaceDelimitersSet = new HashSet<char>(SpaceDelimiters);
+        public static readonly HashSet<char> SpaceDelimitersSet = new(SpaceDelimiters);
 
 
         public static readonly char[] PunctuationChars =
         {
             '.', ',', '"', ';', '!', '?', '&', '(', ')', ':', '„', '“', '<', '>', '|', '«', '»',
-            '/', '\\', '[', ']', '“', '”', '{', '}', '—', '–', '-', '‘', '’', '\'', '*', '=' //* important for wiki and *bold* text, = for wiki header markup
+            '‛', '‟', '‹', '›', '‘', '’', '\u201A',
+            '/', '\\', '[', ']', '“', '”', '{', '}', '—', '–', '-', '\'', '*', '=' //* important for wiki and *bold* text, = for wiki header markup
         };
 
 
@@ -33,7 +36,7 @@ namespace ElskeLib.Utils
         /// </summary>
         public static readonly char[] SpecialPunctuationChars = { '-', '’', '\'' };
 
-        public static readonly HashSet<char> PunctuationCharsSet = new HashSet<char>(PunctuationChars);
+        public static readonly HashSet<char> PunctuationCharsSet = new(PunctuationChars);
 
         
         public static readonly HashSet<int> EmojisUtf32Set = new(EmojiHelper.ListOfEmojisUtf32);
