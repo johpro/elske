@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 
 namespace ElskeLib.Utils
@@ -224,7 +225,7 @@ namespace ElskeLib.Utils
                 for (int i = 0; i < s.Length; i++)
                 {
                     var chr = s[i];
-                    if(IsVariationSelector(chr))
+                    if(IsVariationSelector(chr) || chr == '\u200D' /*zero-width joiner*/)
                         continue;//make sure that new token does not start with variation selector
                     
                     if (chr >= 8205 && chr <= 12953 || chr >= 55356 && chr <= 56128)
@@ -232,7 +233,13 @@ namespace ElskeLib.Utils
                         //could be double- OR single-char emoji
                         //sometimes single-char emoji can still be transformed with variation selector afterwards
 
-                        //warning: ConvertToUtf32 fails if current char is low surrogate char
+                        if (chr >= 55356 && i >= s.Length - 1)
+                        {
+                            //we fail gracefully to also process malformed text
+                            break;
+                        }
+
+                        //warning: ConvertToUtf32 fails if current char is low surrogate char or if no char is following
                         var val = char.ConvertToUtf32(s, i);
                         if (EmojisUtf32Set.Contains(val))
                         {
@@ -242,16 +249,11 @@ namespace ElskeLib.Utils
                                 yield return s.AsSpan(startIdx, i - startIdx).ToString();
                             }
 
-
-                            var len = chr >= 55296 /*high surrogate start*/ ? 2 : 1;
-
-                            var nextI = i + len;
-                            if (nextI < s.Length && IsVariationSelector(s[nextI]))
-                                len++;
-                            
-                            yield return s.AsSpan(i, len).ToString();
+                            //grapheme element / text element can be very long with modifiers etc
+                            var w = StringInfo.GetNextTextElement(s, i);
+                            yield return w;
+                            i += w.Length - 1;
                             startIdx = -1;
-                            i+= len-1;
                             continue;
                         }
                     }

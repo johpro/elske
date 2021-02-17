@@ -111,8 +111,8 @@ namespace ElskeLib.Tests.Utils
         [TestMethod]
         public void TokenizeEmojiTest()
         {
-            var testString = "‼️OMG‼️ you have to see this!!! 😠😠 never,🦣 ever expected this😥";
-            var expected = "‼️|OMG|‼️|you|have|to|see|this|!|!|!|😠|😠|never|,|🦣|ever|expected|this|😥";
+            var testString = "‼️OMG‼️ you have to see this!!! áh 😠😠 never,🦣 ever expected this👩🏽‍🚒😥";
+            var expected = "‼️|OMG|‼️|you|have|to|see|this|!|!|!|áh|😠|😠|never|,|🦣|ever|expected|this|👩🏽‍🚒|😥";
             var res = string.Join('|', testString.Tokenize());
             
             Trace.WriteLine(res);
