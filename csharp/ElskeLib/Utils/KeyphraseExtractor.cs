@@ -44,7 +44,16 @@ namespace ElskeLib.Utils
         /// <summary>
         /// list of stop words to be ignored, must be compatible with applied tokenization
         /// </summary>
-        public string[] StopWords { get; set; }
+        public string[] StopWords
+        {
+            get => _stopWords;
+            set
+            {
+                _stopWords = value;
+                //we need to reinitialize hash set on next use
+                _stopWordsSet = null;
+            }
+        }
 
         /// <summary>
         /// Threshold that determines how unique slightly phrase variants must be to be retained.
@@ -87,6 +96,9 @@ namespace ElskeLib.Utils
             DebugOnlyPhraseCandidates = 20
         }
 
+
+        private HashSet<int> _stopWordsSet;
+        private string[] _stopWords;
 
 
         private const string StorageMetaId = "keyphrase-extractor-meta.json";
@@ -226,7 +238,7 @@ namespace ElskeLib.Utils
         }
 
 
-        double GetIdf(int idx)
+        private double GetIdf(int idx)
         {
             return Math.Log(ReferenceCounts.DocCounts.NumDocuments /
                                (double)Math.Max(1, ReferenceCounts.DocCounts.WordCounts.GetValueOrDefault(idx, 1)));
@@ -236,13 +248,37 @@ namespace ElskeLib.Utils
 
 
 
-        double GetIdf(WordIdxBigram pair)
+        private double GetIdf(WordIdxBigram pair)
         {
             return Math.Log(ReferenceCounts.DocCounts.NumDocuments /
                             (double)Math.Max(1, ReferenceCounts.DocCounts.PairCounts.GetValueOrDefault(pair, 1)));
 
         }
 
+
+        private void EnsureStopWordsSet()
+        {
+            if (ReferenceIdxMap == null)
+                throw new Exception($"{nameof(ReferenceIdxMap)} must be set");
+
+            lock (ReferenceIdxMap)
+            {
+                if (_stopWordsSet != null)
+                    return; //still up-to-date
+
+                if (_stopWords == null || _stopWords.Length == 0)
+                {
+                    _stopWordsSet = new HashSet<int>(0);
+                    return;
+                }
+
+                _stopWordsSet = new HashSet<int>(_stopWords.Length);
+                foreach (var w in _stopWords)
+                {
+                    _stopWordsSet.Add(ReferenceIdxMap.GetIndex(w));
+                }
+            }
+        }
 
 
         /// <summary>
@@ -308,13 +344,10 @@ namespace ElskeLib.Utils
         /// <returns></returns>
         public List<PhraseResult> ExtractPhrases(IEnumerable<int[]> documents, int numTopPhrases)
         {
-            var stopWords = StopWords == null ? new HashSet<int>() : new HashSet<int>(StopWords.Select(w => ReferenceIdxMap.WordToIdx.GetValueOrDefault(w, -1))
-                .Where(idx => idx >= 0));
-
+            EnsureStopWordsSet();
 
             var watch = Stopwatch.StartNew();
-
-
+            
             var maxIdf = Math.Log(ReferenceCounts.DocCounts.NumDocuments);
             var localCounts = CorpusCounts.GetTotalCountsOnly(documents);
 
@@ -334,22 +367,17 @@ namespace ElskeLib.Utils
                     powExp = Math.Log(maxTf, 500);
                     rootExp = 1 / powExp;
                     useRootExp = true;
-
-
+                    
                     if (IsDebugTextOutputEnabled)
                         Trace.WriteLine($"max tf {maxTf} maxidf {maxIdf} | pow exp: {powExp} |root exp: {rootExp}");
                 }
             }
 
-
-
             double TransformTf(int tf)
             {
                 return useRootExp ? Math.Pow(tf, rootExp) : tf;
             }
-
-
-
+            
             var tooShortWords = new HashSet<int>();
 
             if (MinNumCharacters > 1)
@@ -386,7 +414,7 @@ namespace ElskeLib.Utils
 
                 foreach (var p in localCounts.TotalCounts.PairCounts)
                 {
-                    if (stopWords.Contains(p.Key.Idx1) || stopWords.Contains(p.Key.Idx2))
+                    if (_stopWordsSet.Contains(p.Key.Idx1) || _stopWordsSet.Contains(p.Key.Idx2))
                         continue;
 
                     if (wordToHighestBigramCount.TryGetValue(p.Key.Idx1, out var count))
@@ -413,8 +441,8 @@ namespace ElskeLib.Utils
 
             foreach (var p in localCounts.TotalCounts.WordCounts)
             {
-                if (stopWords.Contains(p.Key) ||
-                   MinNumCharacters > 1 && tooShortWords.Contains(p.Key))
+                if (_stopWordsSet.Contains(p.Key) ||
+                    MinNumCharacters > 1 && tooShortWords.Contains(p.Key))
                     continue;
 
                 var tfidf = TransformTf(p.Value) * GetIdf(p.Key);
@@ -459,8 +487,8 @@ namespace ElskeLib.Utils
                         continue;
 
 
-                    var numStopwords = stopWords.Contains(p.Key.Idx1) ? 1 : 0;
-                    if (stopWords.Contains(p.Key.Idx2))
+                    var numStopwords = _stopWordsSet.Contains(p.Key.Idx1) ? 1 : 0;
+                    if (_stopWordsSet.Contains(p.Key.Idx2))
                         numStopwords++;
 
                     if (numStopwords == 2)
@@ -527,7 +555,7 @@ namespace ElskeLib.Utils
             var phraseMinTfTh = Math.Max(2, minTfTh);
             if (Mode >= ExtractingMode.Phrases)
             {
-                phraseCandidates = GetPhraseCandidates(documents, localCounts, phraseMinTfTh, stopWords);
+                phraseCandidates = GetPhraseCandidates(documents, localCounts, phraseMinTfTh);
                 //phraseCandidates = GetPhraseCandidates2(sentences, localCounts, minTfTh);
             }
 
@@ -746,7 +774,7 @@ namespace ElskeLib.Utils
                 if (tf <= 1)
                     continue; //words and bigrams with only one occurrence are special
 
-                var numStopWordsBaseItem = GetNumStopWords(baseItem.Indexes, stopWords);
+                var numStopWordsBaseItem = GetNumStopWords(baseItem.Indexes);
                 var numNonStopWordsBaseItem = baseItem.Indexes.Length - numStopWordsBaseItem;
 
 
@@ -756,7 +784,7 @@ namespace ElskeLib.Utils
                     var longerItem = branch[i];
                     if (patternsTf[longerItem] == tf)
                     {
-                        var numStopWords = GetNumStopWords(longerItem.Indexes, stopWords);
+                        var numStopWords = GetNumStopWords(longerItem.Indexes);
                         if (longerItem.Indexes.Length - numStopWords > numNonStopWordsBaseItem)
                         {
                             //we have longer phrase with equal frequency that has at least one additional term
@@ -822,7 +850,7 @@ namespace ElskeLib.Utils
                         var notStopWordIdx = -1;
                         for (int i = 0; i < baseItem.Indexes.Length; i++)
                         {
-                            if (stopWords.Contains(baseItem.Indexes[i]))
+                            if (_stopWordsSet.Contains(baseItem.Indexes[i]))
                                 numStopWords++;
                             else
                                 notStopWordIdx = baseItem.Indexes[i];
@@ -880,9 +908,9 @@ namespace ElskeLib.Utils
 
 
                         var leftIsNotNew = true;
-                        if (startIdx == 1 && !stopWords.Contains(longerItem.Indexes[0]) ||
+                        if (startIdx == 1 && !_stopWordsSet.Contains(longerItem.Indexes[0]) ||
                             (startIdx == 2 &&
-                             (!stopWords.Contains(longerItem.Indexes[0]) || !stopWords.Contains(longerItem.Indexes[1]))))
+                             (!_stopWordsSet.Contains(longerItem.Indexes[0]) || !_stopWordsSet.Contains(longerItem.Indexes[1]))))
                         {
                             //new words left to original word are not all stop words
 
@@ -907,9 +935,9 @@ namespace ElskeLib.Utils
                         var rightIsNotNew = true;
 
 
-                        if (remainingNumWords == 1 && !stopWords.Contains(longerItem.Indexes[afterIdx]) ||
+                        if (remainingNumWords == 1 && !_stopWordsSet.Contains(longerItem.Indexes[afterIdx]) ||
                             (remainingNumWords == 2 &&
-                             (!stopWords.Contains(longerItem.Indexes[afterIdx]) || !stopWords.Contains(longerItem.Indexes[afterIdx + 1]))))
+                             (!_stopWordsSet.Contains(longerItem.Indexes[afterIdx]) || !_stopWordsSet.Contains(longerItem.Indexes[afterIdx + 1]))))
                         {
                             //new words right to original word are not (all) stop words
 
@@ -1080,12 +1108,12 @@ namespace ElskeLib.Utils
 
         }
 
-        private static int GetNumStopWords(int[] indexes, HashSet<int> stopWords)
+        private int GetNumStopWords(int[] indexes)
         {
             var numStopWords = 0;
             foreach (var index in indexes)
             {
-                if (stopWords.Contains(index))
+                if (_stopWordsSet.Contains(index))
                     numStopWords++;
             }
 
@@ -1218,7 +1246,7 @@ namespace ElskeLib.Utils
 
 
         private Dictionary<WordSequence, int> GetPhraseCandidates(IEnumerable<int[]> sentences, CorpusCounts localCounts,
-            int minTfTh, HashSet<int> stopWords)
+            int minTfTh)
         {
 
             var patternRecycling = new WordSequenceRecycler();
@@ -1236,7 +1264,7 @@ namespace ElskeLib.Utils
                     var val = arr[i];
                     patternTemp.Add(val);
 
-                    if (!stopWords.Contains(val))
+                    if (!_stopWordsSet.Contains(val))
                     {
                         onlyStopWords = false;
                         numNonStopWords++;
@@ -1261,7 +1289,7 @@ namespace ElskeLib.Utils
                         val = arr[j];
                         patternTemp.Add(val);
 
-                        if (!stopWords.Contains(val))
+                        if (!_stopWordsSet.Contains(val))
                         {
                             onlyStopWords = false;
                             numNonStopWords++;

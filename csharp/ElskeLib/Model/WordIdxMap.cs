@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using ElskeLib.Utils;
 
@@ -149,15 +150,7 @@ namespace ElskeLib.Model
 
             foreach (var w in tokens)
             {
-                if (!WordToIdx.TryGetValue(w, out var idx))
-                {
-                    idx = IdxToWord.Count;
-                    WordToIdx.Add(w, idx);
-                    IdxToWord.Add(w);
-
-                }
-
-                l.Add(idx);
+                l.Add(GetIndex(w));
             }
 
             return l;
@@ -168,18 +161,22 @@ namespace ElskeLib.Model
             var l = new int[tokens.Count];
             for (var i = 0; i < tokens.Count; i++)
             {
-                var w = tokens[i];
-                if (!WordToIdx.TryGetValue(w, out var idx))
-                {
-                    idx = IdxToWord.Count;
-                    WordToIdx.Add(w, idx);
-                    IdxToWord.Add(w);
-                }
-
-                l[i] = idx;
+                l[i] = GetIndex(tokens[i]);
             }
 
             return l;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetIndex(string token)
+        {
+            if (WordToIdx.TryGetValue(token, out var idx)) return idx;
+
+            idx = IdxToWord.Count;
+            WordToIdx.Add(token, idx);
+            IdxToWord.Add(token);
+
+            return idx;
         }
 
 
