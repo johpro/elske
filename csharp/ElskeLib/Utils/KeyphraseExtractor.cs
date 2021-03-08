@@ -100,6 +100,10 @@ namespace ElskeLib.Utils
         private HashSet<int> _stopWordsSet;
         private string[] _stopWords;
 
+        /// <summary>
+        /// pooling of dictionaries for vector generation
+        /// </summary>
+        private readonly ThreadLocal<Dictionary<int, int>> _dictLocal = new(() => new Dictionary<int, int>());
 
         private const string StorageMetaId = "keyphrase-extractor-meta.json";
         private const string StorageBlobId = "keyphrase-extractor.bin";
@@ -278,6 +282,71 @@ namespace ElskeLib.Utils
                     _stopWordsSet.Add(ReferenceIdxMap.GetIndex(w));
                 }
             }
+        }
+
+        /// <summary>
+        /// Transform document into TF-IDF weighted Bag-of-Words vector using ReferenceCounts for
+        /// determining the inverse document frequency and StopWords for tokens to ignore
+        /// </summary>
+        /// <param name="document">document to convert</param>
+        /// <param name="generateUnitVector">if true, vector will have unit length</param>
+        /// <returns></returns>
+        public (int key, float value)[] GenerateBoWVector(string document, bool generateUnitVector = false)
+        {
+            List<int> tokenizedDoc;
+            lock (ReferenceIdxMap)
+            { //we may add words to idx map so we have to make sure that no one else is accessing it at the same time
+                tokenizedDoc = ReferenceIdxMap.DocumentToIndexes(document);
+            }
+
+            return GenerateBoWVector(tokenizedDoc, generateUnitVector);
+        }
+
+        /// <summary>
+        /// Transform document into TF-IDF weighted Bag-of-Words vector using ReferenceCounts for
+        /// determining the inverse document frequency and StopWords for tokens to ignore
+        /// </summary>
+        /// <param name="tokenizedDoc">tokenized document to convert</param>
+        /// <param name="generateUnitVector">if true, vector will have unit length</param>
+        /// <returns></returns>
+        public (int key, float value)[] GenerateBoWVector(IEnumerable<int> tokenizedDoc, bool generateUnitVector = false)
+        {
+            EnsureStopWordsSet();
+
+            var dict = _dictLocal.Value;
+            dict.Clear();
+
+            foreach (var val in tokenizedDoc)
+            {
+                if (_stopWordsSet.Contains(val))
+                    continue;
+                dict.IncrementItem(val);
+            }
+            
+            var res = new (int key, float value)[dict.Count];
+            int j = 0;
+            var valSum = 0d;
+            foreach (var p in dict)
+            {
+                var val = p.Value * (float)ReferenceCounts.DocCounts.GetIdf(p.Key);
+                res[j] = (p.Key, val);
+                valSum += val * val;
+                j++;
+            }
+
+            dict.Clear();
+
+            if (!generateUnitVector || res.Length == 0 || valSum <= float.Epsilon)
+                return res;
+
+            var norm = (float)Math.Sqrt(valSum);
+            for (int i = 0; i < res.Length; i++)
+            {
+                res[i] = (res[i].key, res[i].value / norm);
+            }
+
+            return res;
+
         }
 
 

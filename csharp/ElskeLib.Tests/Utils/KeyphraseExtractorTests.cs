@@ -86,6 +86,23 @@ namespace ElskeLib.Tests.Utils
             Assert.IsTrue(phrases.Any(p => p.Phrase == "durdle door"));
         }
 
+        [TestMethod]
+        public void GenerateBoWVectorTest()
+        {
+            var doc = "Three people seriously injured jumping into sea at Dorset beach";
+            var elske = KeyphraseExtractor.FromFile("../../../../../models/en-news.elske");
+            var bow = elske.GenerateBoWVector(doc, true);
+            string firstWord = null;
+            foreach ((int key, float value) in bow.OrderByDescending(it => it.value))
+            {
+                var w = elske.ReferenceIdxMap.IdxToWord[key];
+                Trace.WriteLine($"{w} \t{value}");
+                firstWord ??= w;
+            }
+            Assert.AreEqual(6, bow.Length);
+            Assert.AreEqual("dorset", firstWord);
+            Assert.AreEqual(1, bow.Sum(it => it.value*it.value), 0.000001);
+        }
 
         [TestMethod]
         public void IncompletePhrasesTest()
