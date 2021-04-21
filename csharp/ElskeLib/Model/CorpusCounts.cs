@@ -79,6 +79,29 @@ namespace ElskeLib.Model
 
         }
 
+        public static CorpusCounts GetDocTermCounts(IEnumerable<IEnumerable<int>> documents)
+        {
+            var res = new CorpusCounts();
+            var hashset = new HashSet<int>();
+            var count = 0;
+
+            foreach (var doc in documents)
+            {
+                hashset.Clear();
+                foreach (var word in doc)
+                {
+                    if (hashset.Add(word))
+                        res.DocCounts.WordCounts.IncrementItem(word);
+                }
+                count++;
+            }
+
+            res.DocCounts.NumDocuments = count;
+
+            return res;
+
+        }
+
         public static CorpusCounts GetCounts(IEnumerable<IEnumerable<int>> documents)
         {
             var res = new CorpusCounts();

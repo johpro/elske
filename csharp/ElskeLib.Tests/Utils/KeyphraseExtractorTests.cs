@@ -56,6 +56,35 @@ namespace ElskeLib.Tests.Utils
             {
                 File.Delete(tmpFn);
             }
+
+
+            elske.ReferenceCounts.DocCounts.NumDocuments = 0;
+            try
+            {
+                elske.ExtractPhrases(File.ReadAllText(testFn), 10);
+                Assert.Fail("should have failed because NumDocuments in reference collection is 0");
+            }
+            catch (Exception)
+            {
+
+            }
+
+            elske.ReferenceCounts.DocCounts.NumDocuments = 10;
+            elske.ReferenceCounts.DocCounts.PairCounts.Clear();
+            try
+            {
+                elske.ExtractPhrases(File.ReadAllText(testFn), 10);
+                Assert.Fail("should have failed because pair counts are missing");
+            }
+            catch (Exception)
+            {
+                
+            }
+
+            var numWords = elske.ReferenceCounts.DocCounts.WordCounts.Count;
+            elske = KeyphraseExtractor.CreateFromFolder(dir, new ElskeCreationSettings{DoNotCountPairs = true});
+            Assert.AreEqual(numWords, elske.ReferenceCounts.DocCounts.WordCounts.Count);
+            Assert.AreEqual(0, elske.ReferenceCounts.DocCounts.PairCounts.Count);
         }
 
 

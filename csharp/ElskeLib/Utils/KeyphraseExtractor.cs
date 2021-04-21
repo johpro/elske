@@ -211,7 +211,9 @@ namespace ElskeLib.Utils
                 return tokens;
             });
 
-            res.ReferenceCounts = CorpusCounts.GetDocCounts(docs);
+            res.ReferenceCounts = settings.DoNotCountPairs
+                ? CorpusCounts.GetDocTermCounts(docs)
+                : CorpusCounts.GetDocCounts(docs);
             res.ReferenceCounts.DocCounts.RemoveEntriesBelowThreshold();
 
             //word idx dict can also grow very large, reduce this by removing words that have occurred only once
@@ -416,7 +418,12 @@ namespace ElskeLib.Utils
             EnsureStopWordsSet();
 
             var watch = Stopwatch.StartNew();
-            
+
+            if (ReferenceCounts.DocCounts.NumDocuments < 1
+                || ReferenceCounts.DocCounts.PairCounts == null || ReferenceCounts.DocCounts.PairCounts.Count == 0
+                || ReferenceCounts.DocCounts.WordCounts == null || ReferenceCounts.DocCounts.WordCounts.Count == 0)
+                throw new Exception("ReferenceCounts have to contain word and pair counts of a reference collection");
+
             var maxIdf = Math.Log(ReferenceCounts.DocCounts.NumDocuments);
             var localCounts = CorpusCounts.GetTotalCountsOnly(documents);
 

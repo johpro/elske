@@ -14,11 +14,16 @@ namespace ElskeLib.Model
         /// </summary>
         public TokenizationSettings TokenizationSettings { get; set; } = new TokenizationSettings();
         /// <summary>
-        /// If true the complete collection will be indexed and saved to retrieve
+        /// If true, the complete collection will be indexed and saved to retrieve
         /// exact document frequencies of phrases
         /// </summary>
         public bool BuildReferenceCollection { get; set; }
-        
+        /// <summary>
+        /// If true, bigrams will not be counted to save time in case KeyphraseExtractor is only used to
+        /// create Bag-of-Words representations or to access the reference map.
+        /// </summary>
+        public bool DoNotCountPairs { get; set; }
+
 
     }
 }
