@@ -97,6 +97,27 @@ namespace ElskeLib.Utils
         public static readonly HashSet<string> DutchStopWordsSet = DutchStopWords.ToHashSet();
 
 
+
+        public static readonly string[] EnglishStopWordsMinimal =
+        {
+            "a", "a's", "ain't", "am", "an", "and", "are", "aren't",
+            "aren’t", "arent", "as", "at", "b", "be", "been", "being", "but", "by",
+            "c", "do", "does", "doesn't", "doesn’t", "doesnt", "doing", "don", "don't", "don’t", "dont", "for",
+            "had", "hadn't", "hadn’t", "hadnt", "has", "hasn't", "hasn’t", "hasnt",
+            "have", "haven't", "haven’t", "havent", "having", "he", "he'd", "he'll", "he's", "he’d", "he’ll", "he’s",
+            "her", "here", "here's", "here’s",
+            "hers", "him", "his", "i", "i'd", "i'll", "i'm", "i've", "i’d", "i’ll", "i’m", "i’ve", "im",
+            "in", "into", "is", "isn't", "isn’t", "isnt", "it", "it'd", "it'll", "it's", "it’s", "its",
+            "ive", "my", "not", "of", "on", "or", "our", "ours", "s", "she", "she'd", "she'll", "she's", "she’d", "she’ll",
+            "she’s", "so", "that", "that's", "that’s", "thats",
+            "the", "their", "theirs", "them", "then", "there", "there's", "there’s", "these", "they", "they'd",
+            "they'll", "they're", "they've", "they’d", "they’ll", "they’re", "they’ve", "theyve", "this",
+            "those", "to", "u", "was", "wasn't", "wasn’t", "wasnt", "we", "we'd",
+            "we'll", "we're", "we've", "we’d", "we’ll", "we’re", "we’ve", "were", "weren't",
+            "weren’t", "werent", "weve", "which", "with", "would", "wouldn't", "wouldn’t", "wouldnt",
+            "you", "you'd", "you'll", "you're", "you've", "you’d", "you’ll", "you’re", "you’ve", "your", "yours", "youve"
+        };
+
         public static readonly string[] EnglishStopWords =
         {
             "&gt", "000", "a", "a's", "able", "about", "above", "according", "accordingly", "across", "actually",
@@ -113,8 +134,8 @@ namespace ElskeLib.Utils
             "different", "do", "does", "doesn't", "doesn’t", "doesnt", "doing", "don", "don't", "don’t", "done", "dont",
             "down", "during", "e", "each", "edu", "eg", "eight", "either", "else", "elsewhere", "en", "enough",
             "entirely", "especially", "et", "etc", "even", "ever", "every", "everybody", "everyone", "everything",
-            "everywhere", "ex", "exactly", "except", "f", "far", "few", "fifth", "first", "five", "followed",
-            "following", "follows", "for", "former", "formerly", "forth", "four", "from", "further", "furthermore", "g",
+            "everywhere", "ex", "exactly", "except", "f", "far", "few", "first", "five", "followed",
+            "following", "follows", "for", "former", "formerly", "from", "further", "furthermore", "g",
             "get", "gets", "getting", "give", "given", "gives", "go", "goes", "going", "gone", "good", "got", "gotten",
             "great", "h", "had", "hadn't", "hadn’t", "hadnt", "happens", "hardly", "has", "hasn't", "hasn’t", "hasnt",
             "have", "haven't", "haven’t", "havent", "having", "he", "he'd", "he'll", "he's", "he’d", "he’ll", "he’s",
@@ -144,9 +165,9 @@ namespace ElskeLib.Utils
             "taking", "tell", "tends", "th", "than", "thank", "thanks", "thanx", "that", "that's", "that’s", "thats",
             "the", "their", "theirs", "them", "themselves", "then", "thence", "there", "there's", "there’s",
             "thereafter", "thereby", "therefore", "therein", "theres", "thereupon", "these", "they", "they'd",
-            "they'll", "they're", "they've", "they’d", "they’ll", "they’re", "they’ve", "theyve", "think", "third",
-            "this", "those", "though", "three", "through", "throughout", "thru", "thus", "time", "to", "today",
-            "together", "told", "too", "took", "toward", "towards", "tried", "tries", "truly", "try", "trying", "twice",
+            "they'll", "they're", "they've", "they’d", "they’ll", "they’re", "they’ve", "theyve", "think",
+            "this", "those", "though", "through", "throughout", "thru", "thus", "time", "to", "today",
+            "together", "told", "too", "took", "toward", "towards", "tried", "tries", "truly", "try", "trying",
             "two", "u", "un", "under", "unfortunately", "unless", "unlikely", "until", "unto", "up", "upon", "us",
             "use", "used", "useful", "uses", "using", "usually", "uucp", "v", "value", "various", "ve", "very", "via",
             "viz", "vs", "w", "want", "wants", "was", "wasn't", "wasn’t", "wasnt", "watch", "way", "we", "we'd",

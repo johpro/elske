@@ -21,7 +21,7 @@ namespace ElskeLib.Model
         /// </summary>
         public UniBigramCounts DocCounts { get; set; } = new UniBigramCounts();
         /// <summary>
-        /// for each word (or bigram): number of total occurences in corpus ('term frequency')
+        /// for each word (or bigram): number of total occurrences in corpus ('term frequency')
         /// </summary>
         public UniBigramCounts TotalCounts { get; set; } = new UniBigramCounts();
 
