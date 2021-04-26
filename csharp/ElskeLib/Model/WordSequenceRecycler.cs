@@ -13,11 +13,8 @@ namespace ElskeLib.Model
 {
     public class WordSequenceRecycler
     {
-
-        private readonly ConcurrentDictionary<int, WordSequence> _recycledPatterns = new ConcurrentDictionary<int, WordSequence>();
-
-
-
+        private readonly ConcurrentDictionary<int, WordSequence> _recycledPatterns = new();
+        
         public WordSequence RetrieveOrCreate(int hashCode, FastClearList<int> indexes)
         {
             if (_recycledPatterns.TryGetValue(hashCode, out var pattern))

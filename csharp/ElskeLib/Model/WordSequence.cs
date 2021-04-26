@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using ElskeLib.Utils;
 
@@ -53,7 +54,8 @@ namespace ElskeLib.Model
 
         public bool Equals(WordSequence other)
         {
-            return HashCode == other.HashCode && Indexes.Length == other.Indexes.Length &&
+            return Indexes == other.Indexes ||
+                   HashCode == other.HashCode && Indexes.Length == other.Indexes.Length &&
                    Indexes.AsSpan().SequenceEqual(other.Indexes);
         }
 
@@ -96,75 +98,70 @@ namespace ElskeLib.Model
             return sb.ToString();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Matches(IList<int> wordList)
         {
-            var idx = !(wordList is int[] arr) ? FindIndex(wordList, 0, Indexes)
-                : FindIndex(arr, arr.Length, 0, Indexes);
-
+            var idx = wordList is not int[] arr ? FindIndex(wordList, Indexes)
+                : FindIndex(arr, Indexes);
             return idx >= 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Matches(in WordSequence pattern)
         {
-            return Indexes.Length < pattern.Indexes.Length && Matches(pattern.Indexes)
-                    || Equals(pattern);
+            return Equals(pattern) || Indexes.Length < pattern.Indexes.Length && Matches(pattern.Indexes);
         }
 
 
-        public static int FindIndex(IList<int> listToSearch, int start, IList<int> query)
+        public static int FindIndex(IList<int> listToSearch, IList<int> query)
         {
-            if (listToSearch == null || start >= listToSearch.Count)
+            if (listToSearch == null || listToSearch.Count == 0 || query == null || query.Count == 0)
                 return -1;
 
+            var is1 = query.Count == 1;
             var a = query[0];
-            var b = query.Count == 0 ? 0 : query[1];
+            var b = is1 ? 0 : query[1];
 
             var end = listToSearch.Count - query.Count + 1;
-            var is1 = query.Count == 1;
-            for (int i = start; i < end; i++)
+            for (int i = 0; i < end; i++)
             {
-                if (listToSearch[i] == a)
+                if (listToSearch[i] != a) continue;
+
+                if (is1)
+                    return i;
+
+                if (listToSearch[i + 1] != b)
+                    continue;
+
+                var isMatch = true;
+                for (int j = 2, k = i + 2; j < query.Count; j++, k++)
                 {
-                    if (is1)
-                        return i;
-
-                    if (listToSearch[i + 1] != b)
-                        continue;
-
-                    var isMatch = true;
-                    for (int j = 2, k = i + 2; j < query.Count; j++, k++)
+                    if (listToSearch[k] != query[j])
                     {
-                        if (listToSearch[k] != query[j])
-                        {
-                            isMatch = false;
-                            break;
-                        }
+                        isMatch = false;
+                        break;
                     }
-
-                    if (isMatch)
-                        return i;
                 }
+
+                if (isMatch)
+                    return i;
             }
 
             return -1;
         }
 
-        public static int FindIndex(int[] listToSearch, int listLen, int start, ReadOnlySpan<int> query)
+        public static int FindIndex(int[] listToSearch, ReadOnlySpan<int> query)
         {
-            if (listToSearch == null || start >= listLen)
+            if (listToSearch == null || listToSearch.Length == 0)
                 return -1;
-
 
             switch (query.Length)
             {
                 case 1:
-                    return Array.IndexOf(listToSearch, query[0], start, listLen - start);
+                    return Array.IndexOf(listToSearch, query[0]);
                 default:
                     return listToSearch.AsSpan().IndexOf(query);
             }
-
-
-
         }
 
         

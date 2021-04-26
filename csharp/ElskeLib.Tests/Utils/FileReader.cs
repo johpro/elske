@@ -21,7 +21,7 @@ namespace ElskeLib.Tests.Utils
         {
             var isGzip = fn.EndsWith(".gz", StringComparison.OrdinalIgnoreCase);
             return new StreamReader(isGzip
-                ? (Stream) new GZipStream(File.OpenRead(fn), CompressionMode.Decompress)
+                ? new BufferedStream(new GZipStream(File.OpenRead(fn), CompressionMode.Decompress))
                 : File.OpenRead(fn));
         }
 
@@ -31,7 +31,7 @@ namespace ElskeLib.Tests.Utils
                 File.Delete(fn);
             var isGzip = fn.EndsWith(".gz", StringComparison.OrdinalIgnoreCase);
             return new StreamWriter(isGzip
-                ? (Stream)new GZipStream(File.OpenWrite(fn), CompressionMode.Compress)
+                ? new BufferedStream(new GZipStream(File.OpenWrite(fn), CompressionMode.Compress))
                 : File.OpenWrite(fn));
         }
 
@@ -40,7 +40,7 @@ namespace ElskeLib.Tests.Utils
         {
             var isGzip = fn.EndsWith(".gz", StringComparison.OrdinalIgnoreCase);
             return new BinaryReader(isGzip
-                ? (Stream)new GZipStream(File.OpenRead(fn), CompressionMode.Decompress)
+                ? new BufferedStream(new GZipStream(File.OpenRead(fn), CompressionMode.Decompress))
                 : File.OpenRead(fn));
         }
 
@@ -50,7 +50,7 @@ namespace ElskeLib.Tests.Utils
                 File.Delete(fn);
             var isGzip = fn.EndsWith(".gz", StringComparison.OrdinalIgnoreCase);
             return new BinaryWriter(isGzip
-                ? (Stream)new GZipStream(File.OpenWrite(fn), CompressionMode.Compress)
+                ? new BufferedStream(new GZipStream(File.OpenWrite(fn), CompressionMode.Compress))
                 : File.OpenWrite(fn));
         }
 

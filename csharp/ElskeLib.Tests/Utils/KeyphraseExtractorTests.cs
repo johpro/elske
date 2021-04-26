@@ -247,7 +247,7 @@ namespace ElskeLib.Tests.Utils
             var fn = @"../../../../../datasets/twitter/20-02-12__tweets_en.csv.gz";
 
             var extractor = KeyphraseExtractor.FromFile("../../../../../models/en-twitter.elske");
-
+            extractor.IsDebugStopwatchEnabled = true;
             var avgTweetsPerHour = 15_000_000 / 24;
             var noLocalTweets = 1_000_000;
 

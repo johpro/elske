@@ -1,50 +1,58 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using ElskeLib.Utils;
 
 namespace ElskeLib
 {
     public static class Extensions
     {
-        
+        const uint Fnv1Prime32 = 16777619;
+        public const uint Fnv1StartHash32 = 2166136261;
 
-        public static uint ToFnv1_32(this IList<int> source, uint hash = 2166136261)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint ToFnv1_32(this uint source, uint hash = Fnv1StartHash32)
         {
             unchecked
             {
-                const uint prime = 16777619;
+                hash ^= source;
+                hash *= Fnv1Prime32;
+            }
+            return hash;
+        }
+
+        public static uint ToFnv1_32(this IList<int> source, uint hash = Fnv1StartHash32)
+        {
+            unchecked
+            {
                 for (int i = 0; i < source.Count; i++)
                 {
-
                     hash ^= (uint)source[i];
-                    hash *= prime;
+                    hash *= Fnv1Prime32;
                 }
-
                 return hash;
             }
         }
-        public static unsafe uint ToFnv1_32(this FastClearList<int> source, uint hash = 2166136261)
+        public static unsafe uint ToFnv1_32(this FastClearList<int> source, uint hash = Fnv1StartHash32)
         {
             unchecked
             {
-                const uint prime = 16777619;
                 fixed (int* arr = source.Storage)
                 {
                     var count = source.Count;
                     for (int i = 0; i < count; i++)
                     {
-                        hash ^= (uint) arr[i];
-                        hash *= prime;
+                        hash ^= (uint)arr[i];
+                        hash *= Fnv1Prime32;
                     }
                 }
-
                 return hash;
             }
         }
 
-      
-        
-     
+
+
+
         public static void AddToList<TKey, TVal>(this Dictionary<TKey, List<TVal>> dict, TKey key, TVal val)
         {
             if (!dict.TryGetValue(key, out var l))
@@ -60,7 +68,7 @@ namespace ElskeLib
         {
             if (dict.TryGetValue(key, out var val))
             {
-                dict[key] = val+1;
+                dict[key] = val + 1;
             }
             else
             {

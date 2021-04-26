@@ -831,11 +831,8 @@ namespace ElskeLib.Utils
             }
 
             if (IsDebugTextOutputEnabled)
-            {
-                Trace.WriteLine($"{noLongerWordSequencesAdded} final phrase candidates added");
-
-                Trace.WriteLine("");
-            }
+                Trace.WriteLine($"{noLongerWordSequencesAdded} final phrase candidates added\r\n");
+            
 
             //hierarchy contains for every pattern all other patterns that contain that pattern
             var hierarchy = GetWordSequenceHierarchy(patternsTfIdf.Keys, patternsTf);
@@ -989,25 +986,20 @@ namespace ElskeLib.Utils
                             continue;
 
                         //determine index where parent = baseItem starts
-                        var startIdx = WordSequence.FindIndex(longerItem.Indexes, longerItem.Indexes.Length, 0,
+                        var startIdx = WordSequence.FindIndex(longerItem.Indexes, 
                             baseItem.Indexes);
-
-
+                        
                         var afterIdx = startIdx + baseItem.Indexes.Length;
                         var remainingNumWords = longerItem.Indexes.Length - afterIdx;
 
                         //Trace.WriteLine($"checking: {baseItem.ToString(ReferenceIdxMap.IdxToWord)} | longer item {longerItem.ToString(ReferenceIdxMap.IdxToWord)} | start ix {startIdx} remaining num words {remainingNumWords}");
-
-
                         if (startIdx > 2 || remainingNumWords > 2)
                         {
                             continue;
                         }
 
                         //left overhang
-
-
-
+                        
                         var leftIsNotNew = true;
                         if (startIdx == 1 && !_stopWordsSet.Contains(longerItem.Indexes[0]) ||
                             (startIdx == 2 &&
@@ -1359,11 +1351,13 @@ namespace ElskeLib.Utils
                 for (int i = 0; i < lim; i++)
                 {
                     patternTemp.Clear();
+                    var patternHashCode = Extensions.Fnv1StartHash32;
                     var onlyStopWords = true;
                     var numNonStopWords = 0;
 
                     var val = arr[i];
                     patternTemp.Add(val);
+                    patternHashCode = ((uint) val).ToFnv1_32(patternHashCode);
 
                     if (!_stopWordsSet.Contains(val))
                     {
@@ -1375,8 +1369,7 @@ namespace ElskeLib.Utils
                     {
                         var maxTf = localCounts.TotalCounts.PairCounts.GetValueOrDefault(
                             new WordIdxBigram(arr[j - 1], arr[j]), 1);
-
-
+                        
                         if (maxTf < minTfTh || patternTemp.Count >= MaxNumWords)
                         {
                             //bigram at pos j-1 is too rare or max length reached
@@ -1385,10 +1378,10 @@ namespace ElskeLib.Utils
 
                         if (maxTf < 3 && numNonStopWords != patternTemp.Count)
                             break; //
-
-
+                        
                         val = arr[j];
                         patternTemp.Add(val);
+                        patternHashCode = ((uint)val).ToFnv1_32(patternHashCode);
 
                         if (!_stopWordsSet.Contains(val))
                         {
@@ -1398,10 +1391,8 @@ namespace ElskeLib.Utils
 
                         if (onlyStopWords || patternTemp.Count < 3)
                             continue;
-
-                        var hashCode = (int)patternTemp.ToFnv1_32();
-                        var pattern = patternRecycling.RetrieveOrCreate(hashCode, patternTemp);
-
+                        
+                        var pattern = patternRecycling.RetrieveOrCreate((int)patternHashCode, patternTemp);
                         phraseCandidates.IncrementItem(pattern);
                     }
                 }
@@ -1491,7 +1482,6 @@ namespace ElskeLib.Utils
                 .OrderBy(p => p.Indexes.Length)
                 .ThenByDescending(p => patternsTf[p])
                 .ToArray();
-
             //create term and bigram index of patterns to make subsequent algorithm quicker
             //i.e., wordIdxPair -> list of sequence that contain word (word, -1) or bigram (word1, word2)
             var dict = new Dictionary<WordIdxBigram, List<WordSequence>>();
@@ -1505,32 +1495,41 @@ namespace ElskeLib.Utils
 
                 for (int i = 1; i < arr.Length; i++)
                 {
-
                     dict.AddToList(new WordIdxBigram(arr[i], -1), p);
-
                     var pair = new WordIdxBigram(arr[i - 1], arr[i]);
                     dict.AddToList(pair, p);
                 }
             }
-
             //make index distinct
-            foreach (var k in dict.Keys.ToArray())
+            var set = new HashSet<WordSequence>();
+            foreach (var list in dict.Values)
             {
-                dict[k] = dict[k].Distinct().ToList();
+                if(list.Count <= 1)
+                    continue;
+                set.Clear();
+                var hasDuplicates = false;
+                foreach (var it in list)
+                {
+                    if (!set.Add(it))
+                        hasDuplicates = true;
+                }
+                if(!hasDuplicates)
+                    continue;
+                list.Clear();
+                foreach (var it in set)
+                {
+                    list.Add(it);
+                }
             }
 
-
             var res = new List<List<WordSequence>>();
-
-
+            
             for (var m = 0; m < ordered.Length; m++)
             {
                 ref var p = ref ordered[m];
-
                 //'branch' is now list for parent = item in 'res'
                 var branch = new List<WordSequence>(1) { p };
                 res.Add(branch);
-
 
                 if (p.Indexes.Length <= 2)
                 {
@@ -1552,9 +1551,7 @@ namespace ElskeLib.Utils
 
                     continue;
                 }
-
-
-
+                
                 //to get children, we first get smallest list of candidates from index
                 //we know that child has to contain every bigram of parent, i.e., we can
                 //use rarest bigram for list of candidates
@@ -1587,15 +1584,13 @@ namespace ElskeLib.Utils
                     branch.Add(pattern);
                 }
             }
-
+            
             for (int i = 0; i < res.Count; i++)
             {
                 res[i] = res[i].OrderBy(it => it.Indexes.Length)
                     .ThenByDescending(it => patternsTf[it]).ToList();
             }
-
-
-
+            
             return res;
         }
     }
