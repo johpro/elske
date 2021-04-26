@@ -122,7 +122,7 @@ namespace ElskeLib.Tests.Utils
                 {
                     data = testStemmed[i];
                     tokens = extractorStemmed.ReferenceIdxMap
-                        .TokensToIndexes(data.Text.Tokenize().ToLowerInvariant()).ToArray();
+                        .TokensToIndexes(data.Text.Tokenize().ToLowerInvariant());
                 }
 
                 var phrases =
@@ -216,7 +216,7 @@ namespace ElskeLib.Tests.Utils
             foreach (var annotatedText in dataset)
             {
                 collection.Add(idxMap.TokensToIndexes(annotatedText.Text.Tokenize()
-                    .ToLowerInvariant()).ToArray());
+                    .ToLowerInvariant()));
             }
 
             var extractor = new KeyphraseExtractor

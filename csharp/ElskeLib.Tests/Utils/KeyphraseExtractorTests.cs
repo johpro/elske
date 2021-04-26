@@ -139,7 +139,7 @@ namespace ElskeLib.Tests.Utils
             var elske = KeyphraseExtractor.FromFile("../../../../../models/en-news.elske");
 
             var sentence =
-                elske.ReferenceIdxMap.DocumentToIndexes("say no to bigotry stop bigotry now actnow").ToArray();
+                elske.ReferenceIdxMap.DocumentToIndexes("say no to bigotry stop bigotry now actnow");
 
             var sentences = new List<int[]>();
             for (int n = 100; n >= 1; n -= 20)
@@ -189,7 +189,7 @@ namespace ElskeLib.Tests.Utils
 
                     var text = l.Substring(l.LastIndexOf('\t') + 1);
 
-                    var arr = extractor.ReferenceIdxMap.TokensToIndexes(text.TweetToWordsLowercase(removeUrls: true, cleanHashtags: true, removeRetweetInfo: true).RemovePunctuationChars()).ToArray();
+                    var arr = extractor.ReferenceIdxMap.TokensToIndexes(text.TweetToWordsLowercase(removeUrls: true, cleanHashtags: true, removeRetweetInfo: true).RemovePunctuationChars());
                     if (useUniqueTweetsOnly && !hashSet.Add(WordSequence.CreateWithReference(arr)))
                         continue;
 

@@ -6,6 +6,7 @@
  */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -17,16 +18,17 @@ namespace ElskeLib.Model
 {
     public class WordIdxMap
     {
-        public Dictionary<string, int> WordToIdx { get; private set; } = new Dictionary<string, int>();
-        public List<string> IdxToWord { get; private set; } = new List<string>();
-        public TokenizationSettings TokenizationSettings { get; set; } = new TokenizationSettings();
+        public Dictionary<string, int> WordToIdx { get; private set; } = new();
+        public List<string> IdxToWord { get; private set; } = new();
+        public TokenizationSettings TokenizationSettings { get; set; } = new();
 
         private const string StorageMetaId = "word-idx-map-meta.json";
         private const string StorageBlobId = "word-idx-map.bin";
 
+        private static readonly ConcurrentBag<List<int>> IntListBag = new();
         private class StorageMeta
         {
-            public TokenizationSettings TokenizationSettings { get; set; } = new TokenizationSettings();
+            public TokenizationSettings TokenizationSettings { get; set; } = new();
             public int WordToIdxCount { get; set; }
             public int IdxToWordCount { get; set; }
             public int Version { get; set; } = 2;
@@ -139,21 +141,29 @@ namespace ElskeLib.Model
             return words;
         }
 
-        public List<int> DocumentToIndexes(string document)
+        public int[] DocumentToIndexes(string document)
         {
             return TokensToIndexes(TokenizeDocument(document));
         }
 
-        public List<int> TokensToIndexes(IEnumerable<string> tokens)
+        public int[] TokensToIndexes(IEnumerable<string> tokens)
         {
-            var l = new List<int>();
+            if(IntListBag.TryTake(out var l))
+                l.Clear();
+            else
+                l = new List<int>();
 
             foreach (var w in tokens)
             {
                 l.Add(GetIndex(w));
             }
 
-            return l;
+            var res = l.ToArray();
+
+            l.Clear();
+            IntListBag.Add(l);
+
+            return res;
         }
 
         public int[] TokensToIndexes(IList<string> tokens)

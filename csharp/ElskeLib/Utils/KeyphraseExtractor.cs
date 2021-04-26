@@ -209,7 +209,7 @@ namespace ElskeLib.Utils
 
             var docs = documents.Select(doc =>
             {
-                var tokens = res.ReferenceIdxMap.DocumentToIndexes(doc).ToArray();
+                var tokens = res.ReferenceIdxMap.DocumentToIndexes(doc);
                 res.ReferenceDocuments?.AddDocument(tokens);
                 return tokens;
             });
@@ -320,7 +320,7 @@ namespace ElskeLib.Utils
         /// <returns></returns>
         public (int key, float value)[] GenerateBoWVector(string document, bool generateUnitVector = false)
         {
-            List<int> tokenizedDoc;
+            int[] tokenizedDoc;
             lock (ReferenceIdxMap)
             { //we may add words to idx map so we have to make sure that no one else is accessing it at the same time
                 tokenizedDoc = ReferenceIdxMap.DocumentToIndexes(document);
@@ -389,7 +389,7 @@ namespace ElskeLib.Utils
             int[][] tokenizedDocs;
             lock (ReferenceIdxMap)
             { //we may add words to idx map so we have to make sure that no one else is accessing it at the same time
-                tokenizedDocs = new[] { ReferenceIdxMap.DocumentToIndexes(document).ToArray() };
+                tokenizedDocs = new[] { ReferenceIdxMap.DocumentToIndexes(document) };
             }
 
             return ExtractPhrases(tokenizedDocs, numTopPhrases);
@@ -424,7 +424,7 @@ namespace ElskeLib.Utils
 
             lock (ReferenceIdxMap)
             {
-                arr = documents.Select(doc => ReferenceIdxMap.DocumentToIndexes(doc).ToArray()).ToArray();
+                arr = documents.Select(doc => ReferenceIdxMap.DocumentToIndexes(doc)).ToArray();
             }
 
             return ExtractPhrases(arr, numTopPhrases);
