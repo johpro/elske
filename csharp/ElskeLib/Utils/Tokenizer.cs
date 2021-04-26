@@ -27,7 +27,7 @@ namespace ElskeLib.Utils
         public static readonly char[] PunctuationChars =
         {
             '.', ',', '"', ';', '!', '?', '&', '(', ')', ':', '„', '“', '<', '>', '|', '｜', '«', '»',
-            '‛', '‟', '‹', '›', '‘', '’', '’', '\u201A',
+            '‛', '‟', '‹', '›', '‘', '’', '’', '\u201A', '_',
             '/', '\\', '[', ']', '“', '”', '{', '}', '—', '–', '-', '\'', '*', '=' //* important for wiki and *bold* text, = for wiki header markup
         };
 
