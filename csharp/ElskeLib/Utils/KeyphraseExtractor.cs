@@ -198,10 +198,13 @@ namespace ElskeLib.Utils
         {
             settings ??= new ElskeCreationSettings();
 
+
             var res = new KeyphraseExtractor
             {
                 ReferenceIdxMap = new WordIdxMap { TokenizationSettings = settings.TokenizationSettings },
-                ReferenceDocuments = settings.BuildReferenceCollection ? new BigramDocumentIndex() : null
+                ReferenceDocuments = settings.BuildReferenceCollection ? new BigramDocumentIndex() : null,
+                IsDebugStopwatchEnabled = settings.IsDebugStopwatchEnabled,
+                IsDebugTextOutputEnabled = settings.IsDebugTextOutputEnabled
             };
 
             var docs = documents.Select(doc =>
@@ -211,10 +214,26 @@ namespace ElskeLib.Utils
                 return tokens;
             });
 
+            Stopwatch watch = null;
+            if (settings.IsDebugStopwatchEnabled)
+                watch = Stopwatch.StartNew();
+
             res.ReferenceCounts = settings.DoNotCountPairs
                 ? CorpusCounts.GetDocTermCounts(docs)
                 : CorpusCounts.GetDocCounts(docs);
+
+
+            if (watch != null)
+            {
+                Trace.WriteLine($"{watch.Elapsed} for counting reference collection and creating index map"); watch.Restart();
+            }
+
             res.ReferenceCounts.DocCounts.RemoveEntriesBelowThreshold();
+
+            if (watch != null)
+            {
+                Trace.WriteLine($"{watch.Elapsed} for RemoveEntriesBelowThreshold()"); watch.Restart();
+            }
 
             //word idx dict can also grow very large, reduce this by removing words that have occurred only once
             for (int i = res.ReferenceIdxMap.IdxToWord.Count - 1; i >= 0; i--)
@@ -225,6 +244,12 @@ namespace ElskeLib.Utils
                 var s = res.ReferenceIdxMap.IdxToWord[i];
                 res.ReferenceIdxMap.IdxToWord.RemoveAt(i);
                 res.ReferenceIdxMap.WordToIdx.Remove(s);
+            }
+
+
+            if (watch != null)
+            {
+                Trace.WriteLine($"{watch.Elapsed} for cleaning ReferenceIdxMap"); watch.Restart();
             }
 
             return res;
@@ -324,7 +349,7 @@ namespace ElskeLib.Utils
                     continue;
                 dict.IncrementItem(val);
             }
-            
+
             var res = new (int key, float value)[dict.Count];
             int j = 0;
             var valSum = 0d;
@@ -443,7 +468,7 @@ namespace ElskeLib.Utils
                     powExp = Math.Log(maxTf, 500);
                     rootExp = 1 / powExp;
                     useRootExp = true;
-                    
+
                     if (IsDebugTextOutputEnabled)
                         Trace.WriteLine($"max tf {maxTf} maxidf {maxIdf} | pow exp: {powExp} |root exp: {rootExp}");
                 }
@@ -453,7 +478,7 @@ namespace ElskeLib.Utils
             {
                 return useRootExp ? Math.Pow(tf, rootExp) : tf;
             }
-            
+
             var tooShortWords = new HashSet<int>();
 
             if (MinNumCharacters > 1)

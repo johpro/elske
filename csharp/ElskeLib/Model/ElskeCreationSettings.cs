@@ -25,5 +25,9 @@ namespace ElskeLib.Model
         public bool DoNotCountPairs { get; set; }
 
 
+        public bool IsDebugTextOutputEnabled { get; set; }
+        public bool IsDebugStopwatchEnabled { get; set; }
+
+
     }
 }
