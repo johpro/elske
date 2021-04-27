@@ -6,6 +6,9 @@
  */
 
 using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace ElskeLib.Model
 {
@@ -29,9 +32,11 @@ namespace ElskeLib.Model
 
         public override int GetHashCode()
         {
+            //this is more complex with more instructions compared to previous hash code,
+            //but in the end faster because we have less collisions
             unchecked
             {
-                return (Idx1 * 397) ^ Idx2;
+                return(int) ((((2166136261u ^ (uint)Idx1) * 16777619u) ^ (uint)Idx2) ); //return (Idx1 * 397) ^ Idx2;
             }
         }
 
@@ -51,5 +56,21 @@ namespace ElskeLib.Model
             Idx2 = idxB;
         }
 
+    }
+
+    public class WordIdxBigramComparer : IEqualityComparer<WordIdxBigram>
+    {
+        public bool Equals(WordIdxBigram x, WordIdxBigram y)
+        {
+            return x.Idx1 == y.Idx1 && x.Idx2 == y.Idx2;
+        }
+
+        public int GetHashCode(WordIdxBigram obj)
+        {
+            unchecked
+            {
+                return (obj.Idx1 * 397) ^ obj.Idx2;
+            }
+        }
     }
 }

@@ -7,7 +7,7 @@ namespace ElskeLib
 {
     public static class Extensions
     {
-        const uint Fnv1Prime32 = 16777619;
+        public const uint Fnv1Prime32 = 16777619;
         public const uint Fnv1StartHash32 = 2166136261;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

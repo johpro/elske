@@ -8,7 +8,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -45,13 +47,18 @@ namespace ElskeLib.Model
 
         public static CorpusCounts GetDocCounts(IEnumerable<IEnumerable<int>> documents)
         {
-            var res = new CorpusCounts();
-            var hashset = new HashSet<int>();
-            var hashsetPairs = new HashSet<WordIdxBigram>();
+            var wordCountsLocal = new ThreadLocal<Dictionary<int, int>>(() => new Dictionary<int, int>(), true);
+            var pairCountsLocal = new ThreadLocal<Dictionary<WordIdxBigram, int>>(() =>
+                new Dictionary<WordIdxBigram, int>(), true);
+            var hashsetLocal = new ThreadLocal<HashSet<int>>(() => new HashSet<int>());
+            var hashsetPairsLocal = new ThreadLocal<HashSet<WordIdxBigram>>(() =>
+                new HashSet<WordIdxBigram>());
+            int count = 0;
 
-            var count = 0;
-
-            foreach (var doc in documents)
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+            static void ProcessDocument(IEnumerable<int> doc, 
+                HashSet<int> hashset, HashSet<WordIdxBigram> hashsetPairs,
+                Dictionary<int, int> wordCounts, Dictionary<WordIdxBigram, int> pairCounts)
             {
                 hashset.Clear();
                 hashsetPairs.Clear();
@@ -59,21 +66,71 @@ namespace ElskeLib.Model
                 foreach (var word in doc)
                 {
                     if (hashset.Add(word))
-                        res.DocCounts.WordCounts.IncrementItem(word);
+                        wordCounts.IncrementItem(word);
 
                     if (prevWord != -1)
                     {
                         var pair = new WordIdxBigram(prevWord, word);
                         if (hashsetPairs.Add(pair))
-                            res.DocCounts.PairCounts.IncrementItem(pair);
+                            pairCounts.IncrementItem(pair);
                     }
                     prevWord = word;
                 }
 
-                count++;
             }
             
-            res.DocCounts.NumDocuments = count;
+            if (documents is IList<IEnumerable<int>> documentsList)
+            {
+                //we can use more efficient range-based multi-threading if it is a list, but at the expense of more memory
+                count = documentsList.Count;
+                var rangePartitioner = Partitioner.Create(0, documentsList.Count);
+                Parallel.ForEach(rangePartitioner, (range, state) =>
+                {
+                    var wordCounts = wordCountsLocal.Value;
+                    var pairCounts = pairCountsLocal.Value;
+                    wordCounts.EnsureCapacity((int)(10 * Math.Sqrt(range.Item2 - range.Item1)));
+                    pairCounts.EnsureCapacity(range.Item2 - range.Item1);
+
+                    for (int i = range.Item1; i < range.Item2; i++)
+                    {
+                        var doc = documentsList[i];
+                        if (doc == null)
+                            continue;
+                        ProcessDocument(doc, hashsetLocal.Value, hashsetPairsLocal.Value,
+                            wordCounts, pairCounts);
+                    }
+                });
+            }
+            else
+            {
+                //do not use Parallel.ForEach as we may have IO bottleneck anyway
+                //and then we can at least save memory
+                var wordCounts = wordCountsLocal.Value;
+                var pairCounts = pairCountsLocal.Value;
+                foreach (var doc in documents)
+                {
+                    if (doc == null)
+                        continue;
+                    count++;
+                    ProcessDocument(doc, hashsetLocal.Value, hashsetPairsLocal.Value,
+                        wordCounts, pairCounts);
+                }
+            }
+
+            var res = new CorpusCounts
+            {
+                DocCounts =
+                {
+                    WordCounts = MergeThreadLocalDictionaries(wordCountsLocal),
+                    PairCounts = MergeThreadLocalDictionaries(pairCountsLocal),
+                    NumDocuments = count
+                }
+            };
+            
+            wordCountsLocal.Dispose();
+            pairCountsLocal.Dispose();
+            hashsetLocal.Dispose();
+            hashsetPairsLocal.Dispose();
 
             return res;
 
@@ -81,22 +138,64 @@ namespace ElskeLib.Model
 
         public static CorpusCounts GetDocTermCounts(IEnumerable<IEnumerable<int>> documents)
         {
-            var res = new CorpusCounts();
-            var hashset = new HashSet<int>();
-            var count = 0;
+            var wordCountsLocal = new ThreadLocal<Dictionary<int, int>>(() => new Dictionary<int, int>(), true);
+            var hashsetLocal = new ThreadLocal<HashSet<int>>(() => new HashSet<int>());
+            int count = 0;
 
-            foreach (var doc in documents)
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+            static void ProcessDocument(IEnumerable<int> doc,
+                HashSet<int> hashset, Dictionary<int, int> wordCounts)
             {
                 hashset.Clear();
                 foreach (var word in doc)
                 {
                     if (hashset.Add(word))
-                        res.DocCounts.WordCounts.IncrementItem(word);
+                        wordCounts.IncrementItem(word);
                 }
-                count++;
             }
 
-            res.DocCounts.NumDocuments = count;
+            if (documents is IList<IEnumerable<int>> documentsList)
+            {
+                //we can use more efficient range-based multi-threading if it is a list, but at the expense of more memory
+                count = documentsList.Count;
+                var rangePartitioner = Partitioner.Create(0, documentsList.Count);
+                Parallel.ForEach(rangePartitioner, (range, state) =>
+                {
+                    var wordCounts = wordCountsLocal.Value;
+                    wordCounts.EnsureCapacity((int)(10 * Math.Sqrt(range.Item2 - range.Item1)));
+
+                    for (int i = range.Item1; i < range.Item2; i++)
+                    {
+                        var doc = documentsList[i];
+                        if (doc == null)
+                            continue;
+                        ProcessDocument(doc, hashsetLocal.Value, wordCounts);
+                    }
+                });
+            }
+            else
+            {
+                var wordCounts = wordCountsLocal.Value;
+                foreach (var doc in documents)
+                {
+                    if (doc == null)
+                        continue;
+                    count++;
+                    ProcessDocument(doc, hashsetLocal.Value, wordCounts);
+                }
+            }
+
+            var res = new CorpusCounts
+            {
+                DocCounts =
+                {
+                    WordCounts = MergeThreadLocalDictionaries(wordCountsLocal),
+                    NumDocuments = count
+                }
+            };
+
+            wordCountsLocal.Dispose();
+            hashsetLocal.Dispose();
 
             return res;
 
@@ -159,8 +258,7 @@ namespace ElskeLib.Model
                         res.DocCounts.WordCounts.IncrementItem(val);
                 }
             }
-
-
+            
             res.TotalCounts.NumDocuments = documents.Count;
 
             for (int i = 0; i < documents.Count; i++)
@@ -186,7 +284,6 @@ namespace ElskeLib.Model
             }
 
             res.DocCounts.NumDocuments = documents.Count;
-
             return res;
 
         }
@@ -225,97 +322,136 @@ namespace ElskeLib.Model
 
         public static CorpusCounts GetTotalCountsOnly(IEnumerable<int[]> documents)
         {
-            var countsLocal = new ThreadLocal<UniBigramCounts>(() => new UniBigramCounts(), true);
-
+            var wordCountsLocal = new ThreadLocal<Dictionary<int, int>>(() => new Dictionary<int, int>(), true);
+            var pairCountsLocal = new ThreadLocal<Dictionary<WordIdxBigram, int>>(() => new Dictionary<WordIdxBigram, int>(), true);
             int count = 0;
             if (documents is IList<int[]> documentsList)
             {
-                //we can use more efficient range-based multi-threading if it is a list
+                //we can use more efficient range-based multi-threading if it is a list, but at the expense of more memory
                 count = documentsList.Count;
                 var rangePartitioner = Partitioner.Create(0, documentsList.Count);
                 Parallel.ForEach(rangePartitioner, (range, state) =>
                 {
-                    var counts = countsLocal.Value;
-                    counts.WordCounts.EnsureCapacity((int) (10 * Math.Sqrt(range.Item2 - range.Item1)));
-                    counts.PairCounts.EnsureCapacity(range.Item2 - range.Item1);
+                    var wordCounts = wordCountsLocal.Value;
+                    var pairCounts = pairCountsLocal.Value;
+                    wordCounts.EnsureCapacity((int) (10 * Math.Sqrt(range.Item2 - range.Item1)));
+                    pairCounts.EnsureCapacity(range.Item2 - range.Item1);
 
                     for (int i = range.Item1; i < range.Item2; i++)
                     {
                         var arr = documentsList[i];
-
                         if (arr == null || arr.Length == 0)
                             continue;
-
-                        counts.WordCounts.IncrementItem(arr[0]);
-
+                        wordCounts.IncrementItem(arr[0]);
                         for (int j = 1; j < arr.Length; j++)
                         {
                             var val = arr[j];
-                            counts.WordCounts.IncrementItem(val);
+                            wordCounts.IncrementItem(val);
                             var pair = new WordIdxBigram(arr[j - 1], val);
-                            counts.PairCounts.IncrementItem(pair);
+                            pairCounts.IncrementItem(pair);
                         }
                     }
-
                 });
             }
             else
             {
-                Parallel.ForEach(documents, arr =>
+                var wordCounts = wordCountsLocal.Value;
+                var pairCounts = pairCountsLocal.Value;
+                foreach (var arr in documents)
                 {
                     if (arr == null || arr.Length == 0)
-                        return;
+                        continue;
 
-                    Interlocked.Increment(ref count);
-                    var counts = countsLocal.Value;
-
-                    counts.WordCounts.IncrementItem(arr[0]);
-
+                    count++;
+                    wordCounts.IncrementItem(arr[0]);
                     for (int j = 1; j < arr.Length; j++)
                     {
                         var val = arr[j];
-                        counts.WordCounts.IncrementItem(val);
+                        wordCounts.IncrementItem(val);
                         var pair = new WordIdxBigram(arr[j - 1], val);
-                        counts.PairCounts.IncrementItem(pair);
+                        pairCounts.IncrementItem(pair);
                     }
-                });
+                }
             }
 
-
-
-            var res = new CorpusCounts();
-            var values = countsLocal.Values;
-            if (values.Count == 0)
-                return res;
-
-
-            res.TotalCounts = values[0];
-            res.TotalCounts.NumDocuments = count;
-            if (values.Count == 1)
-                return res;
-
-            res.TotalCounts.WordCounts.EnsureCapacity(values.Sum(v => v.WordCounts.Count));
-            res.TotalCounts.PairCounts.EnsureCapacity(values.Sum(v => v.PairCounts.Count));
-            for (int i = 1; i < countsLocal.Values.Count; i++)
+            var res = new CorpusCounts
             {
-                var c = values[i];
-                var counts = res.TotalCounts.WordCounts;
-                foreach (var p in c.WordCounts)
+                TotalCounts =
                 {
-                    counts.AddToItem(p.Key, p.Value);
+                    WordCounts = MergeThreadLocalDictionaries(wordCountsLocal),
+                    PairCounts = MergeThreadLocalDictionaries(pairCountsLocal),
+                    NumDocuments = count
                 }
+            };
+            wordCountsLocal.Dispose();
+            pairCountsLocal.Dispose();
+            return res;
+        }
+#endif
 
-                var pCounts = res.TotalCounts.PairCounts;
-                foreach (var p in c.PairCounts)
+        internal static Dictionary<T, int> MergeThreadLocalDictionaries<T>(ThreadLocal<Dictionary<T, int>> tLocal)
+        {
+            var values = tLocal.Values; //will create and return a List<T>
+            if (values.Count == 0)
+                return new Dictionary<T, int>();
+            if (values.Count == 1)
+                return values[0];
+            
+            if (values.Count < 4)
+            {
+
+                var r = values.MaxItem(it => it.Count);
+                foreach (var d in values)
                 {
-                    pCounts.AddToItem(p.Key, p.Value);
+                    if(d != r)
+                        AddToFirstDictionary(r, d);
                 }
+                return r;
+            }
+
+            //we had a number of threads = dictionaries, so we should also merge dictionaries in parallel
+            var numDictsPerThread = (int) Math.Ceiling(Math.Sqrt(values.Count));
+            var numThreads = (int) Math.Ceiling(values.Count / (double) numDictsPerThread);
+
+            Parallel.For(0, numThreads, t =>
+            {
+                var start = t * numDictsPerThread;
+                var end = Math.Min(values.Count, start + numDictsPerThread);
+                var dict = values[start];
+                for (int i = start+1; i < end; i++)
+                {
+                    AddToFirstDictionary(dict, values[i]);
+                }
+            });
+            
+            //now do merge of merge
+            Dictionary<T, int> res = null;
+            for (int i = 0; i < values.Count; i += numDictsPerThread)
+            {
+                if (res == null || res.Count < values[i].Count)
+                    res = values[i];
+            }
+
+            for (int i = 0; i < values.Count; i+=numDictsPerThread)
+            {
+                if(values[i] == res)
+                    continue;
+                AddToFirstDictionary(res, values[i]);
             }
 
             return res;
-
-
         }
-#endif
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void AddToFirstDictionary<T>(Dictionary<T, int> firstDict, Dictionary<T, int> secondDict)
+        {
+            foreach (var p in secondDict)
+            {
+                firstDict.AddToItem(p.Key, p.Value);
+            }
+            secondDict.Clear();
+            secondDict.TrimExcess(0);
+        }
+
     }
 }

@@ -272,7 +272,43 @@ namespace ElskeLib.Tests.Utils
 
         }
 
-     
+
+        [TestMethod]
+        public void ArxivPerformanceTest()
+        {
+            var fn = @"../../../../../datasets/arxiv/arxiv-abstracts-2020.txt.gz";
+            var watch = Stopwatch.StartNew();
+            var docs = FileReader.ReadLines(fn).ToArray();
+            Trace.WriteLine($"{watch.Elapsed} for reading {docs.Length:N0} arxiv abstracts."); watch.Restart();
+
+            var elske = KeyphraseExtractor.CreateFromDocuments(docs,
+                new ElskeCreationSettings { IsDebugStopwatchEnabled = true });
+            elske.StopWords = StopWords.EnglishStopWords.Concat(StopWords.DigitsStopWords)
+                .Concat(StopWords.PunctuationStopWords)
+                .Concat(new[] { "$", "^" }).ToArray();
+            
+            Trace.WriteLine($"{watch.Elapsed} for building ELSKE."); watch.Restart();
+
+            var data = docs.AsParallel().Select(d => elske.ReferenceIdxMap.DocumentToIndexes(d)).ToArray();
+
+            Trace.WriteLine($"{watch.Elapsed} for converting data into BoW again."); watch.Restart();
+
+            foreach (var noKeyWords in new[] { 100, 1_000 })
+            {
+
+                Trace.WriteLine("\r\n==========================\r\n");
+
+                var res = elske.ExtractPhrases(data, noKeyWords);
+
+                Trace.WriteLine(noKeyWords + ":");
+                Trace.WriteLine(string.Join(", ", res.Take(noKeyWords)
+                    .Select(r => $"{r.Phrase} ({r.TermFrequency})")));
+
+
+                Trace.WriteLine($"{watch.Elapsed} in total for extracting keyphrases."); watch.Restart();
+
+            }
+        }
 
     }
 }

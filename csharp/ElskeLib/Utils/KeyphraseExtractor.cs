@@ -1412,9 +1412,9 @@ namespace ElskeLib.Utils
             return phraseCandidates;
 #else
 
-            var phraseCandidatesLocal = new ThreadLocal<Dictionary<WordSequence, int>>(() => new Dictionary<WordSequence, int>(), true);
-            var patternTempLocal = new ThreadLocal<FastClearList<int>>(() => new FastClearList<int>());
-
+            using var phraseCandidatesLocal = new ThreadLocal<Dictionary<WordSequence, int>>(() => new Dictionary<WordSequence, int>(), true);
+            using var patternTempLocal = new ThreadLocal<FastClearList<int>>(() => new FastClearList<int>());
+            
             if (sentences is IList<int[]> sentencesList)
             {
                 //we can use range-based multi-threading if we have list-like structure
@@ -1432,32 +1432,16 @@ namespace ElskeLib.Utils
             }
             else
             {
-                Parallel.ForEach(sentences, arr =>
+                var patternTemp = patternTempLocal.Value;
+                var phraseCandidates = phraseCandidatesLocal.Value;
+                foreach (var arr in sentences)
                 {
-                    var patternTemp = patternTempLocal.Value;
-                    var phraseCandidates = phraseCandidatesLocal.Value;
                     ProcessDocument(phraseCandidates, patternTemp, arr);
-                });
-            }
-
-            var values = phraseCandidatesLocal.Values;
-            if (values.Count == 0)
-                return new Dictionary<WordSequence, int>();
-
-            if (values.Count == 1)
-                return values.FirstOrDefault();
-
-            var res = values[0];
-            res.EnsureCapacity(values.Sum(d => d.Count));
-            for (int i = 1; i < values.Count; i++)
-            {
-                var dict = values[i];
-                foreach (var p in dict)
-                {
-                    res.AddToItem(p.Key, p.Value);
                 }
             }
-
+            
+            var res = CorpusCounts.MergeThreadLocalDictionaries(phraseCandidatesLocal);
+            
             return res;
 
 #endif
