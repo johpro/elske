@@ -117,21 +117,17 @@ namespace ElskeLib.Model
         {
             if (listToSearch == null || listToSearch.Count == 0 || query == null || query.Count == 0)
                 return -1;
-
-            var is1 = query.Count == 1;
+            
             var a = query[0];
-            var b = is1 ? 0 : query[1];
 
+            if (query.Count == 1)
+                return listToSearch.IndexOf(a);
+
+            var b = query[1];
             var end = listToSearch.Count - query.Count + 1;
             for (int i = 0; i < end; i++)
             {
-                if (listToSearch[i] != a) continue;
-
-                if (is1)
-                    return i;
-
-                if (listToSearch[i + 1] != b)
-                    continue;
+                if (listToSearch[i] != a || listToSearch[i + 1] != b) continue;
 
                 var isMatch = true;
                 for (int j = 2, k = i + 2; j < query.Count; j++, k++)

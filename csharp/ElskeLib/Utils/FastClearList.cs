@@ -119,7 +119,7 @@ namespace ElskeLib.Utils
 
         public int IndexOf(T item)
         {
-            throw new NotImplementedException();
+            return Array.IndexOf(_storage, item, 0, _counter);
         }
 
         public void Insert(int index, T item)

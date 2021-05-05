@@ -12,9 +12,16 @@ using System.Runtime.InteropServices;
 
 namespace ElskeLib.Model
 {
+    [StructLayout(LayoutKind.Explicit)]
     public readonly struct WordIdxBigram : IEquatable<WordIdxBigram>
     {
+        //enables us to treat this struct either as one long or as two individual integers
+        //*slightly* increases the performance due to faster equality check
+        [FieldOffset(0)]
+        private readonly long Combined;
+        [FieldOffset(0)]
         public readonly int Idx1;
+        [FieldOffset(4)]
         public readonly int Idx2;
 
         public override bool Equals(object obj)
@@ -27,7 +34,7 @@ namespace ElskeLib.Model
 
         public bool Equals(WordIdxBigram other)
         {
-            return Idx1 == other.Idx1 && Idx2 == other.Idx2;
+            return Combined == other.Combined; 
         }
 
         public override int GetHashCode()
@@ -50,27 +57,17 @@ namespace ElskeLib.Model
             return !pair1.Equals(pair2);
         }
 
-        public WordIdxBigram(int idxA, int idxB)
+        public override string ToString()
+        {
+            return $"{Idx1}|{Idx2}";
+        }
+
+        public WordIdxBigram(int idxA, int idxB) : this()
         {
             Idx1 = idxA;
             Idx2 = idxB;
         }
 
     }
-
-    public class WordIdxBigramComparer : IEqualityComparer<WordIdxBigram>
-    {
-        public bool Equals(WordIdxBigram x, WordIdxBigram y)
-        {
-            return x.Idx1 == y.Idx1 && x.Idx2 == y.Idx2;
-        }
-
-        public int GetHashCode(WordIdxBigram obj)
-        {
-            unchecked
-            {
-                return (obj.Idx1 * 397) ^ obj.Idx2;
-            }
-        }
-    }
+    
 }
