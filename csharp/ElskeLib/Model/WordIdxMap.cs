@@ -25,7 +25,7 @@ namespace ElskeLib.Model
         private const string StorageMetaId = "word-idx-map-meta.json";
         private const string StorageBlobId = "word-idx-map.bin";
 
-        private static readonly ConcurrentBag<List<int>> IntListBag = new();
+        private readonly ConcurrentBag<List<int>> _intListBag = new();
         private class StorageMeta
         {
             public TokenizationSettings TokenizationSettings { get; set; } = new();
@@ -148,7 +148,7 @@ namespace ElskeLib.Model
 
         public int[] TokensToIndexes(IEnumerable<string> tokens)
         {
-            if(IntListBag.TryTake(out var l))
+            if(_intListBag.TryTake(out var l))
                 l.Clear();
             else
                 l = new List<int>();
@@ -161,7 +161,7 @@ namespace ElskeLib.Model
             var res = l.ToArray();
 
             l.Clear();
-            IntListBag.Add(l);
+            _intListBag.Add(l);
 
             return res;
         }

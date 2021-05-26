@@ -1347,7 +1347,7 @@ namespace ElskeLib.Utils
             void ProcessDocument(Dictionary<WordSequence, int> phraseCandidates, FastClearList<int> patternTemp, int[] arr)
             {
                 var lim = arr.Length - 2;
-
+                var pairCounts = localCounts.TotalCounts.PairCounts;
                 for (int i = 0; i < lim; i++)
                 {
                     patternTemp.Clear();
@@ -1367,7 +1367,7 @@ namespace ElskeLib.Utils
 
                     for (int j = i + 1; j < arr.Length; j++)
                     {
-                        var maxTf = localCounts.TotalCounts.PairCounts.GetValueOrDefault(
+                        var maxTf = pairCounts.GetValueOrDefault(
                             new WordIdxBigram(arr[j - 1], arr[j]), 1);
                         
                         if (maxTf < minTfTh || patternTemp.Count >= MaxNumWords)

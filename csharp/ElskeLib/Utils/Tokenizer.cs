@@ -105,8 +105,7 @@ namespace ElskeLib.Utils
             foreach (var s in src)
             {
                 idx++;
-
-
+                
 
                 if (string.IsNullOrEmpty(s))
                 {

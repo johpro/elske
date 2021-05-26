@@ -12,6 +12,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using ElskeLib.Model;
 using ElskeLib.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -288,7 +289,7 @@ namespace ElskeLib.Tests.Utils
                 .Concat(new[] { "$", "^" }).ToArray();
             
             Trace.WriteLine($"{watch.Elapsed} for building ELSKE."); watch.Restart();
-
+            
             var data = docs.AsParallel().Select(d => elske.ReferenceIdxMap.DocumentToIndexes(d)).ToArray();
 
             Trace.WriteLine($"{watch.Elapsed} for converting data into BoW again."); watch.Restart();
