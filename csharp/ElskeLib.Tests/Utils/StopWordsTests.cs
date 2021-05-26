@@ -54,13 +54,13 @@ namespace ElskeLib.Tests.Utils
             var stopWordsSet = stopWords
                 .Concat(StopWords.PunctuationStopWords)
                 .Concat(StopWords.DigitsStopWords)
-                .Select(w => elske.ReferenceIdxMap.WordToIdx.GetValueOrDefault(w, -1))
+                .Select(w => elske.ReferenceIdxMap.GetIndex(w, false))
                 .Where(w => w >= 0)
                 .ToHashSet();
             foreach (var wTuple in frequentWords
                 .Where(p => !stopWordsSet.Contains(p.Key)).Take(100))
             {
-                Trace.WriteLine($"{elske.ReferenceIdxMap.IdxToWord[wTuple.Key]} [{wTuple.Value}]");
+                Trace.WriteLine($"{elske.ReferenceIdxMap.GetToken(wTuple.Key)} [{wTuple.Value}]");
             }
         }
 

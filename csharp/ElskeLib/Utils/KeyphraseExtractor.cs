@@ -197,8 +197,6 @@ namespace ElskeLib.Utils
         public static KeyphraseExtractor CreateFromDocuments(IEnumerable<string> documents, ElskeCreationSettings settings = null)
         {
             settings ??= new ElskeCreationSettings();
-
-
             var res = new KeyphraseExtractor
             {
                 ReferenceIdxMap = new WordIdxMap { TokenizationSettings = settings.TokenizationSettings },
@@ -206,7 +204,6 @@ namespace ElskeLib.Utils
                 IsDebugStopwatchEnabled = settings.IsDebugStopwatchEnabled,
                 IsDebugTextOutputEnabled = settings.IsDebugTextOutputEnabled
             };
-
             var docs = documents.Select(doc =>
             {
                 var tokens = res.ReferenceIdxMap.DocumentToIndexes(doc);
@@ -222,30 +219,18 @@ namespace ElskeLib.Utils
                 ? CorpusCounts.GetDocTermCounts(docs)
                 : CorpusCounts.GetDocCounts(docs);
 
-
             if (watch != null)
             {
                 Trace.WriteLine($"{watch.Elapsed} for counting reference collection and creating index map"); watch.Restart();
             }
-
             res.ReferenceCounts.DocCounts.RemoveEntriesBelowThreshold();
-
             if (watch != null)
             {
                 Trace.WriteLine($"{watch.Elapsed} for RemoveEntriesBelowThreshold()"); watch.Restart();
             }
 
             //word idx dict can also grow very large, reduce this by removing words that have occurred only once
-            for (int i = res.ReferenceIdxMap.IdxToWord.Count - 1; i >= 0; i--)
-            {
-                if (res.ReferenceCounts.DocCounts.WordCounts.ContainsKey(i))
-                    break;
-
-                var s = res.ReferenceIdxMap.IdxToWord[i];
-                res.ReferenceIdxMap.IdxToWord.RemoveAt(i);
-                res.ReferenceIdxMap.WordToIdx.Remove(s);
-            }
-
+            res.ReferenceIdxMap.RemoveTokensNotPresentInDictionary(res.ReferenceCounts.DocCounts.WordCounts);
 
             if (watch != null)
             {
@@ -320,12 +305,7 @@ namespace ElskeLib.Utils
         /// <returns></returns>
         public (int key, float value)[] GenerateBoWVector(string document, bool generateUnitVector = false)
         {
-            int[] tokenizedDoc;
-            lock (ReferenceIdxMap)
-            { //we may add words to idx map so we have to make sure that no one else is accessing it at the same time
-                tokenizedDoc = ReferenceIdxMap.DocumentToIndexes(document);
-            }
-
+            var tokenizedDoc = ReferenceIdxMap.DocumentToIndexes(document);
             return GenerateBoWVector(tokenizedDoc, generateUnitVector);
         }
 
@@ -386,12 +366,7 @@ namespace ElskeLib.Utils
         /// <returns></returns>
         public List<PhraseResult> ExtractPhrases(string document, int numTopPhrases)
         {
-            int[][] tokenizedDocs;
-            lock (ReferenceIdxMap)
-            { //we may add words to idx map so we have to make sure that no one else is accessing it at the same time
-                tokenizedDocs = new[] { ReferenceIdxMap.DocumentToIndexes(document) };
-            }
-
+            var tokenizedDocs = new[] { ReferenceIdxMap.DocumentToIndexes(document) };
             return ExtractPhrases(tokenizedDocs, numTopPhrases);
         }
 
@@ -413,20 +388,13 @@ namespace ElskeLib.Utils
                 var query = documents.Select(doc =>
                 {
                     var tokens = ReferenceIdxMap.TokenizeDocument(doc).ToArray();
-                    lock (ReferenceIdxMap)
-                        return ReferenceIdxMap.TokensToIndexes(tokens);
+                    return ReferenceIdxMap.TokensToIndexes(tokens);
                 });
 
                 return ExtractPhrases(query, numTopPhrases);
             }
 
-            int[][] arr;
-
-            lock (ReferenceIdxMap)
-            {
-                arr = documents.Select(doc => ReferenceIdxMap.DocumentToIndexes(doc)).ToArray();
-            }
-
+            var arr = documents.Select(doc => ReferenceIdxMap.DocumentToIndexes(doc)).ToArray();
             return ExtractPhrases(arr, numTopPhrases);
         }
 
@@ -485,7 +453,7 @@ namespace ElskeLib.Utils
             {
                 foreach (var idx in localCounts.TotalCounts.WordCounts.Keys)
                 {
-                    if (ReferenceIdxMap.IdxToWord[idx].Length < MinNumCharacters)
+                    if (ReferenceIdxMap.GetTokenAsMemory(idx).Length < MinNumCharacters)
                         tooShortWords.Add(idx);
                 }
             }
@@ -689,7 +657,8 @@ namespace ElskeLib.Utils
 
             if (Mode == ExtractingMode.DebugOnlyPhraseCandidates)
             {
-                return phraseCandidates.Select(p => new PhraseResult(p.Key, p.Value, 0, p.Key.ToString(ReferenceIdxMap.IdxToWord))).ToList();
+                return phraseCandidates.Select(p =>
+                    new PhraseResult(p.Key, p.Value, 0, ReferenceIdxMap.WordSequenceToString(p.Key))).ToList();
             }
 
             var phraseCandidatesList = phraseCandidates.ToArray();
@@ -756,16 +725,12 @@ namespace ElskeLib.Utils
 
             if (IsDebugTextOutputEnabled)
             {
-
                 Trace.WriteLine($"{phraseCandidates.Count} phrase candidates extracted after extensive cleaning");
-
-
                 Trace.WriteLine("");
                 foreach (var p in phraseCandidates)
                 {
-                    Trace.WriteLine($"{p.Key.ToString(ReferenceIdxMap.IdxToWord)} | {p.Value}");
+                    Trace.WriteLine($"{ReferenceIdxMap.WordSequenceToString(p.Key)} | {p.Value}");
                 }
-
                 Trace.WriteLine("\r\n");
             }
 
@@ -832,7 +797,7 @@ namespace ElskeLib.Utils
 
             if (IsDebugTextOutputEnabled)
                 Trace.WriteLine($"{noLongerWordSequencesAdded} final phrase candidates added\r\n");
-            
+
 
             //hierarchy contains for every pattern all other patterns that contain that pattern
             var hierarchy = GetWordSequenceHierarchy(patternsTfIdf.Keys, patternsTf);
@@ -851,7 +816,7 @@ namespace ElskeLib.Utils
                 {
                     foreach (var pattern in branch)
                     {
-                        Trace.WriteLine($"{pattern.ToString(ReferenceIdxMap.IdxToWord)}\t [{patternsTf[pattern]}]");
+                        Trace.WriteLine($"{ReferenceIdxMap.WordSequenceToString(pattern)}\t [{patternsTf[pattern]}]");
                     }
                     Trace.WriteLine("");
                 }
@@ -899,7 +864,7 @@ namespace ElskeLib.Utils
                 Trace.WriteLine("\r\nremoved due to equal frequency:");
                 foreach (var wordSequence in toRemoveSet)
                 {
-                    Trace.WriteLine(wordSequence.ToString(ReferenceIdxMap.IdxToWord));
+                    Trace.WriteLine(ReferenceIdxMap.WordSequenceToString(wordSequence));
                 }
             }
 
@@ -986,9 +951,9 @@ namespace ElskeLib.Utils
                             continue;
 
                         //determine index where parent = baseItem starts
-                        var startIdx = WordSequence.FindIndex(longerItem.Indexes, 
+                        var startIdx = WordSequence.FindIndex(longerItem.Indexes,
                             baseItem.Indexes);
-                        
+
                         var afterIdx = startIdx + baseItem.Indexes.Length;
                         var remainingNumWords = longerItem.Indexes.Length - afterIdx;
 
@@ -999,7 +964,7 @@ namespace ElskeLib.Utils
                         }
 
                         //left overhang
-                        
+
                         var leftIsNotNew = true;
                         if (startIdx == 1 && !_stopWordsSet.Contains(longerItem.Indexes[0]) ||
                             (startIdx == 2 &&
@@ -1172,7 +1137,7 @@ namespace ElskeLib.Utils
             {
 
                 if (IsDebugTextOutputEnabled)
-                    Trace.WriteLine(pattern.ToString(ReferenceIdxMap.IdxToWord));
+                    Trace.WriteLine(ReferenceIdxMap.WordSequenceToString(pattern));
                 patternsTfIdf.Remove(pattern);
             }
 
@@ -1185,19 +1150,17 @@ namespace ElskeLib.Utils
                 foreach (var p in patternsTfIdf
                     .OrderByDescending(p => p.Value))
                 {
-                    Trace.WriteLine($"{p.Key.ToString(ReferenceIdxMap.IdxToWord)} | tfidf {p.Value:N2} | count {patternsTf[p.Key]}");
+                    Trace.WriteLine($"{ReferenceIdxMap.WordSequenceToString(p.Key)} | tfidf {p.Value:N2} | count {patternsTf[p.Key]}");
                 }
             }
 
-            lock (ReferenceIdxMap)
-            {
-                return patternsTfIdf
-                    .Where(p => p.Value >= tfidfTh)
-                    .OrderByDescending(p => p.Value)
-                    .Take(numTopPhrases)
-                    .Select(p => new PhraseResult(p.Key, patternsTf[p.Key], p.Value,
-                        p.Key.ToString(ReferenceIdxMap.IdxToWord))).ToList();
-            }
+            return patternsTfIdf
+                .Where(p => p.Value >= tfidfTh)
+                .OrderByDescending(p => p.Value)
+                .Take(numTopPhrases)
+                .Select(p => new PhraseResult(p.Key, patternsTf[p.Key], p.Value,
+                    ReferenceIdxMap.WordSequenceToString(p.Key))).ToList();
+
 
         }
 
@@ -1357,7 +1320,7 @@ namespace ElskeLib.Utils
 
                     var val = arr[i];
                     patternTemp.Add(val);
-                    patternHashCode = ((uint) val).ToFnv1_32(patternHashCode);
+                    patternHashCode = ((uint)val).ToFnv1_32(patternHashCode);
 
                     if (!_stopWordsSet.Contains(val))
                     {
@@ -1369,7 +1332,7 @@ namespace ElskeLib.Utils
                     {
                         var maxTf = pairCounts.GetValueOrDefault(
                             new WordIdxBigram(arr[j - 1], arr[j]), 1);
-                        
+
                         if (maxTf < minTfTh || patternTemp.Count >= MaxNumWords)
                         {
                             //bigram at pos j-1 is too rare or max length reached
@@ -1378,7 +1341,7 @@ namespace ElskeLib.Utils
 
                         if (maxTf < 3 && numNonStopWords != patternTemp.Count)
                             break; //
-                        
+
                         val = arr[j];
                         patternTemp.Add(val);
                         patternHashCode = ((uint)val).ToFnv1_32(patternHashCode);
@@ -1391,7 +1354,7 @@ namespace ElskeLib.Utils
 
                         if (onlyStopWords || patternTemp.Count < 3)
                             continue;
-                        
+
                         var pattern = patternRecycling.RetrieveOrCreate((int)patternHashCode, patternTemp);
                         phraseCandidates.IncrementItem(pattern);
                     }
@@ -1414,7 +1377,7 @@ namespace ElskeLib.Utils
 
             using var phraseCandidatesLocal = new ThreadLocal<Dictionary<WordSequence, int>>(() => new Dictionary<WordSequence, int>(), true);
             using var patternTempLocal = new ThreadLocal<FastClearList<int>>(() => new FastClearList<int>());
-            
+
             if (sentences is IList<int[]> sentencesList)
             {
                 //we can use range-based multi-threading if we have list-like structure
@@ -1439,9 +1402,9 @@ namespace ElskeLib.Utils
                     ProcessDocument(phraseCandidates, patternTemp, arr);
                 }
             }
-            
+
             var res = CorpusCounts.MergeThreadLocalDictionaries(phraseCandidatesLocal);
-            
+
             return res;
 
 #endif
@@ -1488,7 +1451,7 @@ namespace ElskeLib.Utils
             var set = new HashSet<WordSequence>();
             foreach (var list in dict.Values)
             {
-                if(list.Count <= 1)
+                if (list.Count <= 1)
                     continue;
                 set.Clear();
                 var hasDuplicates = false;
@@ -1497,7 +1460,7 @@ namespace ElskeLib.Utils
                     if (!set.Add(it))
                         hasDuplicates = true;
                 }
-                if(!hasDuplicates)
+                if (!hasDuplicates)
                     continue;
                 list.Clear();
                 foreach (var it in set)
@@ -1507,7 +1470,7 @@ namespace ElskeLib.Utils
             }
 
             var res = new List<List<WordSequence>>();
-            
+
             for (var m = 0; m < ordered.Length; m++)
             {
                 ref var p = ref ordered[m];
@@ -1535,7 +1498,7 @@ namespace ElskeLib.Utils
 
                     continue;
                 }
-                
+
                 //to get children, we first get smallest list of candidates from index
                 //we know that child has to contain every bigram of parent, i.e., we can
                 //use rarest bigram for list of candidates
@@ -1568,13 +1531,13 @@ namespace ElskeLib.Utils
                     branch.Add(pattern);
                 }
             }
-            
+
             for (int i = 0; i < res.Count; i++)
             {
                 res[i] = res[i].OrderBy(it => it.Indexes.Length)
                     .ThenByDescending(it => patternsTf[it]).ToList();
             }
-            
+
             return res;
         }
     }

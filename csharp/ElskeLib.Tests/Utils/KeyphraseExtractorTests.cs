@@ -125,7 +125,7 @@ namespace ElskeLib.Tests.Utils
             string firstWord = null;
             foreach ((int key, float value) in bow.OrderByDescending(it => it.value))
             {
-                var w = elske.ReferenceIdxMap.IdxToWord[key];
+                var w = elske.ReferenceIdxMap.GetToken(key);
                 Trace.WriteLine($"{w} \t{value}");
                 firstWord ??= w;
             }

@@ -33,6 +33,19 @@ namespace ElskeLib
                 return hash;
             }
         }
+        public static uint ToFnv1_32(this ReadOnlyMemory<char> source, uint hash = Fnv1StartHash32)
+        {
+            unchecked
+            {
+                var src = source.Span;
+                for (int i = 0; i < src.Length; i++)
+                {
+                    hash ^= src[i];
+                    hash *= Fnv1Prime32;
+                }
+                return hash;
+            }
+        }
         public static unsafe uint ToFnv1_32(this FastClearList<int> source, uint hash = Fnv1StartHash32)
         {
             unchecked
