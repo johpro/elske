@@ -190,7 +190,8 @@ namespace ElskeLib.Tests.Utils
 
                     var text = l.Substring(l.LastIndexOf('\t') + 1);
 
-                    var arr = extractor.ReferenceIdxMap.TokensToIndexes(text.TweetToWordsLowercase(removeUrls: true, cleanHashtags: true, removeRetweetInfo: true).RemovePunctuationChars());
+                    var arr = extractor.ReferenceIdxMap
+                        .TokensToIndexes(text.TweetToWordsLowercase(removeUrls: true, cleanHashtags: true, removeRetweetInfo: true).RemovePunctuationChars());
                     if (useUniqueTweetsOnly && !hashSet.Add(WordSequence.CreateWithReference(arr)))
                         continue;
 
@@ -249,6 +250,7 @@ namespace ElskeLib.Tests.Utils
 
             var extractor = KeyphraseExtractor.FromFile("../../../../../models/en-twitter.elske");
             extractor.IsDebugStopwatchEnabled = true;
+            extractor.ReferenceIdxMap.TokenizationSettings.HtmlDecode = true;
             var avgTweetsPerHour = 15_000_000 / 24;
             var noLocalTweets = 1_000_000;
 

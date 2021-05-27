@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Diagnostics;
 using System.Linq;
 using ElskeLib.Utils;
@@ -145,8 +146,8 @@ namespace ElskeLib.Tests.Utils
         {
             Assert.AreEqual(Article.SplitSpaces().Count(),
                 Article.SplitSpaces().ToLowerInvariant().Count());
-
-            if(Article.SplitSpaces().ToLowerInvariant().Any(s => s.Any(chr => char.IsUpper(chr))))
+            
+            if(Article.SplitSpaces().ToLowerInvariant().Any(s => s.ToArray().Any(chr => char.IsUpper(chr))))
                 Assert.Fail();
 
             var res = string.Join('|', Article.SplitSpaces().ToLowerInvariant());
@@ -160,9 +161,9 @@ namespace ElskeLib.Tests.Utils
         [TestMethod()]
         public void RemovePunctuationCharsTest()
         {
-            var tokens = Article.Tokenize().RemovePunctuationChars();
-            Assert.IsTrue(tokens.Last() == "restrictions");
-            Assert.IsTrue(tokens.Contains("well-known"));
+            var tokens = Article.Tokenize().RemovePunctuationChars().ToArray();
+            Assert.IsTrue(tokens.Last().ToString() == "restrictions");
+            Assert.IsTrue(tokens.Any(t => t.ToString() == "well-known"));
 
 
             var res = string.Join('|', tokens.ToLowerInvariant());
@@ -170,7 +171,7 @@ namespace ElskeLib.Tests.Utils
             Trace.WriteLine(res);
 
 
-            if (tokens.Any(s => s.Any(chr => chr != '-' && !char.IsLetterOrDigit(chr))))
+            if (tokens.Any(s => s.ToArray().Any(chr => chr != '-' && !char.IsLetterOrDigit(chr))))
                 Assert.Fail();
 
 

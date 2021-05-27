@@ -270,7 +270,7 @@ namespace ElskeLib.Tests.Utils
                 var key = file.Name.Split('.')[0];
                 var keywords = annotations[key];
 
-                text = string.Join(" ", text.Tokenize().ToLowerInvariant());
+                text = string.Join(" ", text.ToLowerInvariant().Tokenize());
 
                 return new AnnotatedText(text, keywords);
             }).ToList();
@@ -299,7 +299,7 @@ namespace ElskeLib.Tests.Utils
                     .Split(';').Select(s => s.Trim(' ', '\t', '\r', '\n').ToLowerInvariant())
                     .Where(t => !string.IsNullOrWhiteSpace(t)).ToArray();
 
-                text = string.Join(" ", text.Tokenize().ToLowerInvariant());
+                text = string.Join(" ", text.ToLowerInvariant().Tokenize());
 
                 return new AnnotatedText(text, keywords);
             }).ToList();
@@ -325,7 +325,7 @@ namespace ElskeLib.Tests.Utils
                     .Select(s => s.Trim(' ', '\t', '\r', '\n').ToLowerInvariant())
                     .Where(t => !string.IsNullOrWhiteSpace(t)).ToArray();
 
-                text = string.Join(" ", text.Tokenize().ToLowerInvariant());
+                text = string.Join(" ", text.ToLowerInvariant().Tokenize());
 
                 return new AnnotatedText(text, keywords);
             }).ToList();
@@ -365,7 +365,7 @@ namespace ElskeLib.Tests.Utils
                         s => s.Trim(' ', '\t', '\r', '\n').ToLowerInvariant())
                     .Where(t => !string.IsNullOrWhiteSpace(t)).ToArray();
 
-                text = string.Join(" ", text.Tokenize().ToLowerInvariant());
+                text = string.Join(" ", text.ToLowerInvariant().Tokenize());
 
                 return new AnnotatedText(text, keywords);
             }).Where(it => it.Text != null).ToList();

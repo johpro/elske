@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -142,8 +143,17 @@ namespace ElskeLib.Model
         /// </summary>
         /// <param name="document"></param>
         /// <returns></returns>
-        public IEnumerable<string> TokenizeDocument(string document)
+        public IEnumerable<ReadOnlyMemory<char>> TokenizeDocument(string document)
         {
+            //we need to apply HtmlDecode and convert text to lowercase first so that we can avoid
+            //allocations down the line (converting individual tokens to lowercase is expensive).
+            //We still profit from the fact that we can reduce total number of objects with ReadOnlyMemory
+            //instead of allocating strings for each token.
+            if (TokenizationSettings.HtmlDecode)
+                document = WebUtility.HtmlDecode(document);
+            if (TokenizationSettings.ConvertToLowercase)
+                document = document.ToLowerInvariant();
+
             var words = document.SplitSpaces();
             if (TokenizationSettings.TwitterRemoveHashtags
                 || TokenizationSettings.TwitterRemoveRetweetInfo
@@ -157,9 +167,7 @@ namespace ElskeLib.Model
             words = words.Tokenize();
             if (!TokenizationSettings.RetainPunctuationCharacters)
                 words = words.RemovePunctuationChars();
-            if (TokenizationSettings.ConvertToLowercase)
-                words = words.ToLowerInvariant();
-
+            
             return words;
         }
 
@@ -413,7 +421,7 @@ namespace ElskeLib.Model
             }
         }
 
-        
+
 
     }
 
@@ -427,6 +435,10 @@ namespace ElskeLib.Model
         /// Keep punctuation characters such as '.', will be extra tokens
         /// </summary>
         public bool RetainPunctuationCharacters { get; set; } = false;
+        /// <summary>
+        /// Decode HTML-specific encodings such as &amp;
+        /// </summary>
+        public bool HtmlDecode { get; set; }
         /// <summary>
         /// Remove beginnings of the like 'RT @dummy: ...", relevant for tweets
         /// </summary>
