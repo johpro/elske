@@ -20,6 +20,10 @@ using ElskeLib.Utils;
 
 namespace ElskeLib.Model
 {
+    /// <summary>
+    /// Represents mapping of individual tokens (words) to their numerical representation (integer)
+    /// and provides methods to tokenize documents and convert them into a sequence of corresponding integers.
+    /// </summary>
     public class WordIdxMap
     {
         private static readonly CharRoMemoryContentEqualityComparer MemoryComparer = new();
@@ -399,6 +403,51 @@ namespace ElskeLib.Model
             return IndexListToString(sequence.Indexes);
         }
 
+        /// <summary>
+        /// Creates and returns list of mapped tokens.
+        /// The index of each item corresponds to its respective numerical representation.
+        /// </summary>
+        /// <returns></returns>
+        public List<string> ToList()
+        {
+            bool lockTaken = false;
+            try
+            {
+                _spinLock.Enter(ref lockTaken);
+                var res = new List<string>(_idxToWord.Count);
+                foreach (var mem in _idxToWord)
+                {
+                    res.Add(mem.ToString());
+                }
+                return res;
+            }
+            finally
+            {
+                if (lockTaken)
+                    _spinLock.Exit();
+            }
+        }
+        
+        /// <summary>
+        /// Creates and returns list of mapped tokens as ReadOnlyMemory.
+        /// The index of each item corresponds to its respective numerical representation.
+        /// </summary>
+        /// <returns></returns>
+        public List<ReadOnlyMemory<char>> ToListAsMemory()
+        {
+            bool lockTaken = false;
+            try
+            {
+                _spinLock.Enter(ref lockTaken);
+                return _idxToWord.ToList();
+            }
+            finally
+            {
+                if (lockTaken)
+                    _spinLock.Exit();
+            }
+        }
+
         internal void RemoveTokensNotPresentInDictionary<T>(IDictionary<int, T> dict)
         {
             bool lockTaken = false;
@@ -420,6 +469,8 @@ namespace ElskeLib.Model
                     _spinLock.Exit();
             }
         }
+
+        
 
 
 
@@ -465,7 +516,7 @@ namespace ElskeLib.Model
     {
         public bool Equals(ReadOnlyMemory<char> x, ReadOnlyMemory<char> y)
         {
-            return x.IsEmpty == y.IsEmpty && x.Length == y.Length && x.Span.SequenceEqual(y.Span);
+            return x.Length == y.Length && x.Span.SequenceEqual(y.Span);
         }
 
         public int GetHashCode(ReadOnlyMemory<char> obj)

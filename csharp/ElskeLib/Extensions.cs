@@ -1,6 +1,14 @@
-﻿using System;
+﻿/*
+ * Copyright (c) Johannes Knittel
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using ElskeLib.Utils;
 
 namespace ElskeLib
@@ -33,17 +41,40 @@ namespace ElskeLib
                 return hash;
             }
         }
-        public static uint ToFnv1_32(this ReadOnlyMemory<char> source, uint hash = Fnv1StartHash32)
+        public static unsafe uint ToFnv1_32(this ReadOnlyMemory<char> source, uint hash = Fnv1StartHash32)
         {
             unchecked
             {
+                if (source.Length == 0)
+                    return hash;
                 var src = source.Span;
-                for (int i = 0; i < src.Length; i++)
+                fixed (char* srcCharPtr = src)
                 {
-                    hash ^= src[i];
-                    hash *= Fnv1Prime32;
+                    ref var ptr = ref Unsafe.AsRef<byte>(srcCharPtr);
+                    var len = src.Length;
+                    while (len >= 4)
+                    {
+                        var p0 = Unsafe.ReadUnaligned<uint>(ref ptr);
+                        var p1 = Unsafe.ReadUnaligned<uint>(
+                            ref Unsafe.AddByteOffset(ref ptr, (IntPtr)(void*)4));
+                        hash ^= p0;
+                        hash *= Fnv1Prime32;
+                        hash ^= p1;
+                        hash *= Fnv1Prime32;
+                        len -= 4;
+                        ptr = ref Unsafe.AddByteOffset(ref ptr, (IntPtr)(void*)8);
+                    }
+                    while (len > 0)
+                    {
+                        var p = Unsafe.ReadUnaligned<ushort>(ref ptr);
+                        hash ^= p;
+                        hash *= Fnv1Prime32;
+                        ptr = ref Unsafe.AddByteOffset(ref ptr, (IntPtr)(void*)2);
+                        len--;
+                    }
+                    return hash;
                 }
-                return hash;
+
             }
         }
         public static unsafe uint ToFnv1_32(this FastClearList<int> source, uint hash = Fnv1StartHash32)
