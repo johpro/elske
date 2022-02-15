@@ -1025,7 +1025,7 @@ namespace ElskeLib.Utils
                     var hierarchyDict = hierarchy.ToDictionary(l => l[0], l => l);
 
                     var patternsToIgnore = new HashSet<WordSequence>();
-                    var currentPatterns = new FastClearList<WordSequence>();
+                    var currentPatterns = new List<WordSequence>();
 
                     foreach (var branch in hierarchy)
                     {
@@ -1308,7 +1308,7 @@ namespace ElskeLib.Utils
 
             var patternRecycling = new WordSequenceRecycler();
 
-            void ProcessDocument(Dictionary<WordSequence, int> phraseCandidates, FastClearList<int> patternTemp, int[] arr)
+            void ProcessDocument(Dictionary<WordSequence, int> phraseCandidates, List<int> patternTemp, int[] arr)
             {
                 var lim = arr.Length - 2;
                 var pairCounts = localCounts.TotalCounts.PairCounts;
@@ -1365,7 +1365,7 @@ namespace ElskeLib.Utils
 
 #if SINGLE_CORE_ONLY
 
-            var patternTemp = new FastClearList<int>();
+            var patternTemp = new List<int>();
             var phraseCandidates = new Dictionary<WordSequence, int>();
 
             foreach (var arr in sentences)
@@ -1377,7 +1377,7 @@ namespace ElskeLib.Utils
 #else
 
             using var phraseCandidatesLocal = new ThreadLocal<Dictionary<WordSequence, int>>(() => new Dictionary<WordSequence, int>(), true);
-            using var patternTempLocal = new ThreadLocal<FastClearList<int>>(() => new FastClearList<int>());
+            using var patternTempLocal = new ThreadLocal<List<int>>(() => new List<int>());
 
             if (sentences is IList<int[]> sentencesList)
             {

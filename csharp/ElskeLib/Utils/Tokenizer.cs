@@ -44,7 +44,7 @@ namespace ElskeLib.Utils
 
         public static readonly HashSet<int> EmojisUtf32Set = new(EmojiHelper.ListOfEmojisUtf32);
 
-        private static readonly ConcurrentBag<FastClearList<(int startIdx, int length)>> SlicingListBag = new();
+        private static readonly ConcurrentBag<List<(int startIdx, int length)>> SlicingListBag = new();
 
 
         public static IEnumerable<ReadOnlyMemory<char>> SplitSpaces(this string src)
@@ -206,7 +206,7 @@ namespace ElskeLib.Utils
         public static IEnumerable<ReadOnlyMemory<char>> Tokenize(this IEnumerable<ReadOnlyMemory<char>> src)
         {
             if (!SlicingListBag.TryTake(out var slicingList))
-                slicingList = new FastClearList<(int startIdx, int length)>();
+                slicingList = new List<(int startIdx, int length)>();
             try
             {
                 foreach (var sMem in src)

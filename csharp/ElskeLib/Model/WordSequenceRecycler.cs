@@ -7,7 +7,9 @@
 
 using System;
 using System.Collections.Concurrent;
-using ElskeLib.Utils;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace ElskeLib.Model
 {
@@ -15,11 +17,11 @@ namespace ElskeLib.Model
     {
         private readonly ConcurrentDictionary<int, WordSequence> _recycledPatterns = new();
         
-        public WordSequence RetrieveOrCreate(int hashCode, FastClearList<int> indexes)
+        public WordSequence RetrieveOrCreate(int hashCode, List<int> indexes)
         {
             if (_recycledPatterns.TryGetValue(hashCode, out var pattern))
             {
-                return indexes.Storage.AsSpan(0, indexes.Count).SequenceEqual(pattern.Indexes) 
+                return CollectionsMarshal.AsSpan(indexes).SequenceEqual(pattern.Indexes) 
                     ? pattern : new WordSequence(indexes, hashCode);
             }
 

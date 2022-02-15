@@ -77,11 +77,11 @@ namespace ElskeLib
 
             }
         }
-        public static unsafe uint ToFnv1_32(this FastClearList<int> source, uint hash = Fnv1StartHash32)
+        public static unsafe uint ToFnv1_32(this List<int> source, uint hash = Fnv1StartHash32)
         {
             unchecked
             {
-                fixed (int* arr = source.Storage)
+                fixed (int* arr = CollectionsMarshal.AsSpan(source))
                 {
                     var count = source.Count;
                     for (int i = 0; i < count; i++)

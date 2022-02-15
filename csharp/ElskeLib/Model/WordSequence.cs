@@ -32,14 +32,14 @@ namespace ElskeLib.Model
             HashCode = (int)Indexes.ToFnv1_32();
         }
 
-        public WordSequence(FastClearList<int> indexes)
+        public WordSequence(List<int> indexes)
         {
             Indexes = indexes.ToArray();
             HashCode = (int)Indexes.ToFnv1_32();
 
         }
 
-        public WordSequence(FastClearList<int> indexes, int hashCode)
+        public WordSequence(List<int> indexes, int hashCode)
         {
             Indexes = indexes.ToArray();
             HashCode = hashCode;
