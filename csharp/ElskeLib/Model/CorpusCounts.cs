@@ -329,6 +329,8 @@ namespace ElskeLib.Model
             {
                 //we can use more efficient range-based multi-threading if it is a list, but at the expense of more memory
                 count = documentsList.Count;
+                if (count <= 0)
+                    return new CorpusCounts();
                 var rangePartitioner = Partitioner.Create(0, documentsList.Count);
                 Parallel.ForEach(rangePartitioner, (range, state) =>
                 {
@@ -400,7 +402,7 @@ namespace ElskeLib.Model
             if (values.Count < 4)
             {
 
-                var r = values.MaxItem(it => it.Count);
+                var r = values.MaxBy(it => it.Count);
                 foreach (var d in values)
                 {
                     if(d != r)

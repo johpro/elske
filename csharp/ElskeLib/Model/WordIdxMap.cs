@@ -281,6 +281,7 @@ namespace ElskeLib.Model
 
         /// <summary>
         /// Retrieves the token as ROM that the provided index represents.
+        /// Returns an empty span if the index is out of range.
         /// </summary>
         /// <param name="index"></param>
         /// <returns></returns>
@@ -291,6 +292,10 @@ namespace ElskeLib.Model
             try
             {
                 _spinLock.Enter(ref lockTaken);
+                if ((uint)index >= (uint)_idxToWord.Count)
+                    return ReadOnlyMemory<char>.Empty;
+                //there should not be a second range check
+                //as the compiler should optimize it away after inlining
                 return _idxToWord[index];
             }
             finally

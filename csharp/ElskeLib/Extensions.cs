@@ -96,173 +96,61 @@ namespace ElskeLib
 
 
 
-
-        public static void AddToList<TKey, TVal>(this Dictionary<TKey, List<TVal>> dict, TKey key, TVal val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ref T DangerousGetReferenceAt<T>(this T[] array, int i)
         {
-            if (!dict.TryGetValue(key, out var l))
-            {
-                l = new List<TVal>();
-                dict.Add(key, l);
-            }
-
-            l.Add(val);
+            ref var arrayData = ref MemoryMarshal.GetArrayDataReference(array);
+            ref var ri = ref Unsafe.Add(ref arrayData, i);
+            return ref ri;
         }
 
-        public static void IncrementItem<TKey>(this Dictionary<TKey, int> dict, TKey key)
+
+
+        public static void AddToList<TKey, TVal>(this Dictionary<TKey, List<TVal>> dict, TKey key, TVal val) where TKey : notnull
         {
-            if (dict.TryGetValue(key, out var val))
+            ref List<TVal>? list = ref CollectionsMarshal.GetValueRefOrAddDefault(dict, key, out _);
+            if (list == null)
             {
-                dict[key] = val + 1;
+                list = new List<TVal>();
             }
-            else
-            {
-                dict.Add(key, 1);
-            }
+
+            list.Add(val);
         }
 
-        public static int IncrementItemAndReturn<TKey>(this Dictionary<TKey, int> dict, TKey key)
+        public static void IncrementItem<TKey>(this Dictionary<TKey, int> dict, TKey key) where TKey : notnull
         {
-            if (dict.TryGetValue(key, out var val))
-            {
-                val++;
-                dict[key] = val;
-                return val;
-            }
-
-
-            dict.Add(key, 1);
-            return 1;
-
+            ref var value = ref CollectionsMarshal.GetValueRefOrAddDefault(dict, key, out _);
+            value++;
         }
 
-        public static double AddToItem<TKey>(this Dictionary<TKey, double> dict, TKey key, double value)
+        public static int IncrementItemAndReturn<TKey>(this Dictionary<TKey, int> dict, TKey key) where TKey : notnull
         {
-            if (dict.TryGetValue(key, out var val))
-            {
-                var newVal = val + value;
-                dict[key] = newVal;
-                return newVal;
-            }
-
-            dict.Add(key, value);
+            ref var value = ref CollectionsMarshal.GetValueRefOrAddDefault(dict, key, out _);
+            value++;
             return value;
         }
 
-        public static int AddToItem<TKey>(this Dictionary<TKey, int> dict, TKey key, int value)
+        public static double AddToItem<TKey>(this Dictionary<TKey, double> dict, TKey key, double value) where TKey : notnull
         {
-            if (dict.TryGetValue(key, out var val))
-            {
-                var newVal = val + value;
-                dict[key] = newVal;
-                return newVal;
-            }
-
-            dict.Add(key, value);
-            return value;
+            ref var v = ref CollectionsMarshal.GetValueRefOrAddDefault(dict, key, out _);
+            v += value;
+            return v;
         }
 
-
-        public static TVal MaxItem<TVal>(this IEnumerable<TVal> arr, Func<TVal, DateTime> expression)
+        public static float AddToItem<TKey>(this Dictionary<TKey, float> dict, TKey key, float value) where TKey : notnull
         {
-            var maxV = DateTime.MinValue;
-            var ret = default(TVal);
-            foreach (var val in arr)
-            {
-                var vl = expression(val);
-                if (vl > maxV)
-                {
-                    maxV = vl;
-                    ret = val;
-                }
-            }
-
-            return ret;
+            ref var v = ref CollectionsMarshal.GetValueRefOrAddDefault(dict, key, out _);
+            v += value;
+            return v;
         }
 
-        public static TVal MaxItem<TVal>(this ReadOnlySpan<TVal> arr, Func<TVal, DateTime> expression)
+        public static int AddToItem<TKey>(this Dictionary<TKey, int> dict, TKey key, int value) where TKey : notnull
         {
-            var maxV = DateTime.MinValue;
-            var ret = default(TVal);
-            foreach (var val in arr)
-            {
-                var vl = expression(val);
-                if (vl > maxV)
-                {
-                    maxV = vl;
-                    ret = val;
-                }
-            }
-
-            return ret;
+            ref var v = ref CollectionsMarshal.GetValueRefOrAddDefault(dict, key, out _);
+            v += value;
+            return v;
         }
 
-        public static TVal MaxItem<TVal>(this IEnumerable<TVal> arr, Func<TVal, int> expression)
-        {
-            var maxV = int.MinValue;
-            var ret = default(TVal);
-            foreach (var val in arr)
-            {
-                var vl = expression(val);
-                if (vl > maxV)
-                {
-                    maxV = vl;
-                    ret = val;
-                }
-            }
-
-            return ret;
-        }
-
-        public static TVal MaxItem<TVal>(this IEnumerable<TVal> arr, Func<TVal, double> expression)
-        {
-            var maxV = double.MinValue;
-            var ret = default(TVal);
-            foreach (var val in arr)
-            {
-                var vl = expression(val);
-                if (vl > maxV)
-                {
-                    maxV = vl;
-                    ret = val;
-                }
-            }
-
-            return ret;
-        }
-
-        public static TVal MinItem<TVal>(this IEnumerable<TVal> arr, Func<TVal, int> expression)
-        {
-            var maxV = int.MaxValue;
-            var ret = default(TVal);
-            foreach (var val in arr)
-            {
-                var vl = expression(val);
-                if (vl < maxV)
-                {
-                    maxV = vl;
-                    ret = val;
-                }
-            }
-
-            return ret;
-        }
-
-        public static TVal MinItem<TVal>(this IEnumerable<TVal> arr, Func<TVal, double> expression)
-        {
-            var maxV = double.MaxValue;
-            var ret = default(TVal);
-            foreach (var val in arr)
-            {
-                var vl = expression(val);
-                if (vl < maxV)
-                {
-                    maxV = vl;
-                    ret = val;
-                }
-            }
-
-            return ret;
-        }
 
 
 
@@ -272,9 +160,7 @@ namespace ElskeLib
             while (n > 1)
             {
                 int k = rng.Next(n--);
-                T temp = array[n];
-                array[n] = array[k];
-                array[k] = temp;
+                (array[n], array[k]) = (array[k], array[n]);
             }
         }
 
@@ -284,9 +170,7 @@ namespace ElskeLib
             while (n > 1)
             {
                 int k = rng.Next(n--);
-                T temp = array[n];
-                array[n] = array[k];
-                array[k] = temp;
+                (array[n], array[k]) = (array[k], array[n]);
             }
         }
 

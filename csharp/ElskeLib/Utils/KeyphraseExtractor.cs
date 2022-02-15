@@ -419,7 +419,8 @@ namespace ElskeLib.Utils
 
             var maxIdf = Math.Log(ReferenceCounts.DocCounts.NumDocuments);
             var localCounts = CorpusCounts.GetTotalCountsOnly(documents);
-
+            if (localCounts.TotalCounts.NumDocuments == 0)
+                return new List<PhraseResult>();
             var rootExp = 1d;
             var powExp = 1d;
 
