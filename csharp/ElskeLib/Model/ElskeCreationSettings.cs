@@ -24,6 +24,12 @@ namespace ElskeLib.Model
         /// </summary>
         public bool DoNotCountPairs { get; set; }
 
+        /// <summary>
+        /// The vocabulary and the term/bigram counts will be truncated to contain
+        /// only terms that appear in as many documents as specified here (default is 2).
+        /// This saves space and memory.
+        /// </summary>
+        public int MinTermDocFrequency { get; set; } = 2;
 
         public bool IsDebugTextOutputEnabled { get; set; }
         public bool IsDebugStopwatchEnabled { get; set; }

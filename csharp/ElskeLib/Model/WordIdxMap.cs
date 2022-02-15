@@ -37,6 +37,9 @@ namespace ElskeLib.Model
         private readonly List<ReadOnlyMemory<char>> _idxToWord = new();
         private SpinLock _spinLock = new();
 
+        internal List<ReadOnlyMemory<char>> IndexToWord => _idxToWord;
+        internal Dictionary<ReadOnlyMemory<char>, int> WordToIndex => _wordToIdx;
+
         /// <summary>
         /// Number of tokens (= words) in this map.
         /// </summary>

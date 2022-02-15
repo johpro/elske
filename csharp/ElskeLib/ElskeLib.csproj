@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <Version>1.2.0</Version>
+    <Version>1.2.10</Version>
     <Authors>Johannes Knittel</Authors>
     <Product>ELSKE</Product>
 	<Title>ELSKE</Title>

@@ -223,18 +223,66 @@ namespace ElskeLib.Utils
             {
                 Trace.WriteLine($"{watch.Elapsed} for counting reference collection and creating index map"); watch.Restart();
             }
-            res.ReferenceCounts.DocCounts.RemoveEntriesBelowThreshold();
+
+            if (settings.BuildReferenceCollection || settings.MinTermDocFrequency <= 1)
+                return res;
+
+            var wordCounts = res.ReferenceCounts.DocCounts.WordCounts;
+            var prevWordCount = wordCounts.Count;
+            res.ReferenceCounts.DocCounts.RemoveEntriesBelowThreshold(settings.MinTermDocFrequency);
+            wordCounts = res.ReferenceCounts.DocCounts.WordCounts;
+            var numTermsRemoved = prevWordCount - wordCounts.Count;
             if (watch != null)
             {
-                Trace.WriteLine($"{watch.Elapsed} for RemoveEntriesBelowThreshold()"); watch.Restart();
+                Trace.WriteLine($"{watch.Elapsed} for cleaning reference counts ({numTermsRemoved:N0} terms removed)");
+                watch.Restart();
             }
 
-            //word idx dict can also grow very large, reduce this by removing words that have occurred only once
-            res.ReferenceIdxMap.RemoveTokensNotPresentInDictionary(res.ReferenceCounts.DocCounts.WordCounts);
+            if (numTermsRemoved <= 0)
+                return res;
+
+            var pairCounts = res.ReferenceCounts.DocCounts.PairCounts;
+            //also clean word idx dict as it can also grow very large
+            var newIdxMap = new WordIdxMap { TokenizationSettings = settings.TokenizationSettings };
+            var idxToWordList = res.ReferenceIdxMap.IndexToWord;
+            var oldIdxToNewIdxMap = new int[idxToWordList.Count];
+            for (int i = 0; i < idxToWordList.Count; i++)
+            {
+                var token = idxToWordList[i];
+                if (wordCounts.ContainsKey(i))
+                {
+                    var idx = newIdxMap.IndexToWord.Count;
+                    newIdxMap.IndexToWord.Add(token);
+                    newIdxMap.WordToIndex.Add(token, idx);
+                    oldIdxToNewIdxMap[i] = idx;
+                    continue;
+                }
+
+                //token with index i has been removed
+                oldIdxToNewIdxMap[i] = -1;
+            }
+
+            res.ReferenceIdxMap = newIdxMap;
+            var newWordCounts = new Dictionary<int, int>(wordCounts.Count);
+            foreach (var p in wordCounts)
+            {
+                newWordCounts.Add(oldIdxToNewIdxMap[p.Key], p.Value);
+            }
+            res.ReferenceCounts.DocCounts.WordCounts = newWordCounts;
+            if (pairCounts != null && pairCounts.Count != 0)
+            {
+                var newPairCounts = new Dictionary<WordIdxBigram, int>(pairCounts.Count);
+                foreach (var p in pairCounts)
+                {
+                    newPairCounts.Add(new WordIdxBigram(oldIdxToNewIdxMap[p.Key.Idx1], oldIdxToNewIdxMap[p.Key.Idx2]),
+                        p.Value);
+                }
+                res.ReferenceCounts.DocCounts.PairCounts = newPairCounts;
+            }
 
             if (watch != null)
             {
-                Trace.WriteLine($"{watch.Elapsed} for cleaning ReferenceIdxMap"); watch.Restart();
+                Trace.WriteLine($"{watch.Elapsed} for cleaning ReferenceIdxMap and ReferenceCounts (now {res.ReferenceIdxMap.Count:N0} words)"); watch.Restart();
             }
 
             return res;
