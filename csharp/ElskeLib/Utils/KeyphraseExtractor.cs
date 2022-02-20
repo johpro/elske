@@ -535,25 +535,8 @@ namespace ElskeLib.Utils
                     if (_stopWordsSet.Contains(p.Key.Idx1) || _stopWordsSet.Contains(p.Key.Idx2))
                         continue;
 
-                    if (wordToHighestBigramCount.TryGetValue(p.Key.Idx1, out var count))
-                    {
-                        if (count < p.Value)
-                            wordToHighestBigramCount[p.Key.Idx1] = p.Value;
-                    }
-                    else
-                    {
-                        wordToHighestBigramCount.Add(p.Key.Idx1, p.Value);
-                    }
-
-                    if (wordToHighestBigramCount.TryGetValue(p.Key.Idx2, out count))
-                    {
-                        if (count < p.Value)
-                            wordToHighestBigramCount[p.Key.Idx2] = p.Value;
-                    }
-                    else
-                    {
-                        wordToHighestBigramCount.Add(p.Key.Idx2, p.Value);
-                    }
+                    wordToHighestBigramCount.SetItemToMax(p.Key.Idx1, p.Value);
+                    wordToHighestBigramCount.SetItemToMax(p.Key.Idx2, p.Value);
                 }
             }
 

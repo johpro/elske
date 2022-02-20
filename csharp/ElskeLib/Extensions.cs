@@ -123,6 +123,12 @@ namespace ElskeLib
             value++;
         }
 
+        public static void SetItemToMax<TKey>(this Dictionary<TKey, int> dict, TKey key, int value) where TKey : notnull
+        {
+            ref var v = ref CollectionsMarshal.GetValueRefOrAddDefault(dict, key, out var exists);
+            v = exists ? Math.Max(v, value) : value;
+        }
+
         public static int IncrementItemAndReturn<TKey>(this Dictionary<TKey, int> dict, TKey key) where TKey : notnull
         {
             ref var value = ref CollectionsMarshal.GetValueRefOrAddDefault(dict, key, out _);
