@@ -13,6 +13,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -323,12 +324,11 @@ namespace ElskeLib.Model
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetIndexInternal(ReadOnlyMemory<char> token)
         {
-            if (_wordToIdx.TryGetValue(token, out var idx)) return idx;
-
+            ref var idx = ref CollectionsMarshal.GetValueRefOrAddDefault(_wordToIdx, token, out var exists);
+            if (exists)
+                return idx;
             idx = _idxToWord.Count;
-            _wordToIdx.Add(token, idx);
             _idxToWord.Add(token);
-
             return idx;
         }
 
