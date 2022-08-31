@@ -354,3 +354,5 @@ MigrationBackup/
 /datasets/Nguyen2007/data
 /datasets/SemEval2010
 /datasets/arxiv/arxiv-abstracts-2020.txt.gz
+/datasets/vis/vispapers_test_abstracts.txt
+/datasets/vis/vispapers21-abstracts.txt.gz

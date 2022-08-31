@@ -313,5 +313,62 @@ namespace ElskeLib.Tests.Utils
             }
         }
 
+        [TestMethod]
+        public void VisAbstractsTest()
+        {
+            var fn = @"../../../../../datasets/vis/vispapers21-abstracts.txt.gz";
+            RunAbstractsTest(fn);
+        }
+        [TestMethod]
+        public void VisAbstractsArxivTest()
+        {
+            var fn = @"../../../../../datasets/arxiv/arxiv-abstracts-2020.txt.gz";
+            RunAbstractsTest(fn);
+        }
+
+        private void RunAbstractsTest(string fn)
+        {
+            var watch = Stopwatch.StartNew();
+            var docs = FileReader.ReadLines(fn).ToArray();
+            Trace.WriteLine($"{watch.Elapsed} for reading {docs.Length:N0} paper abstracts."); watch.Restart();
+
+            var elske = KeyphraseExtractor.CreateFromDocuments(docs,
+                new ElskeCreationSettings
+                {
+                    IsDebugStopwatchEnabled = true, BuildReferenceCollection = true,
+                    TokenizationSettings = new TokenizationSettings
+                    {
+                        RetainPunctuationCharacters = true,
+                        TwitterRemoveUrls = true
+                    }
+
+                });
+            elske.CountRequirements = new CountRequirementOptions
+            {
+                MinUnigramFrequency = 0,
+                MinUnigramDocCount = 0,
+                MinBigramFrequency = 0,
+                MinBigramDocCount = 0,
+                MinPhraseFrequency = 0,
+                MinPhraseDocCount = 3
+            };
+            elske.StopWords = StopWords.EnglishStopWords.Concat(StopWords.DigitsStopWords)
+                .Concat(StopWords.PunctuationStopWords)
+                .Concat(new[] { "$", "^" }).ToArray();
+
+            Trace.WriteLine($"{watch.Elapsed} for building ELSKE."); watch.Restart();
+
+            foreach (var text in FileReader.ReadLines(@"../../../../../datasets/vis/vispapers_test_abstracts.txt"))
+            {
+                var res = elske.ExtractPhrases(text, 30);
+                Trace.WriteLine($"\r\nABSTRACT:\r\n{text}\r\n\r\nKEYWORDS:\r\n");
+                foreach (var r in res)
+                {
+                    Trace.WriteLine($"{r.TfIdf} \t| {r.TermFrequency}\t | {r.Phrase}");
+                }
+            }
+
+        }
+
     }
 }

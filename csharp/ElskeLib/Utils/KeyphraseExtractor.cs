@@ -67,6 +67,12 @@ namespace ElskeLib.Utils
         public int MinNumCharacters { get; set; }
 
         /// <summary>
+        /// Additional parameters that specify how often certain terms have to appear in the source or in the
+        /// reference collection such that they are eligible as keywords/keyphrases.
+        /// </summary>
+        public CountRequirementOptions CountRequirements { get; set; } = new();
+
+        /// <summary>
         /// Maximum sequence length of a keyphrase
         /// </summary>
         public int MaxNumWords { get; set; } = 40;
@@ -227,24 +233,40 @@ namespace ElskeLib.Utils
             if (settings.BuildReferenceCollection || settings.MinTermDocFrequency <= 1)
                 return res;
 
-            var wordCounts = res.ReferenceCounts.DocCounts.WordCounts;
-            var prevWordCount = wordCounts.Count;
-            res.ReferenceCounts.DocCounts.RemoveEntriesBelowThreshold(settings.MinTermDocFrequency);
-            wordCounts = res.ReferenceCounts.DocCounts.WordCounts;
-            var numTermsRemoved = prevWordCount - wordCounts.Count;
+            res.TruncateVocabulary(settings.MinTermDocFrequency); 
+
             if (watch != null)
             {
-                Trace.WriteLine($"{watch.Elapsed} for cleaning reference counts ({numTermsRemoved:N0} terms removed)");
-                watch.Restart();
+                Trace.WriteLine($"{watch.Elapsed} for cleaning ReferenceIdxMap and ReferenceCounts (now {res.ReferenceIdxMap.Count:N0} words)"); watch.Restart();
             }
 
-            if (numTermsRemoved <= 0)
-                return res;
+            return res;
+        }
 
-            var pairCounts = res.ReferenceCounts.DocCounts.PairCounts;
+        /// <summary>
+        /// Remove tokens in the ReferenceIdxMap and ReferenceCounts that appear in less documents than the specified threshold (according to the
+        /// ReferenceCounts of the instance).
+        /// Please be aware that this introduces breaking changes as the mapping between tokens and their numerical
+        /// representation (index) will change.
+        /// </summary>
+        /// <param name="minDocFrequency"></param>
+        public void TruncateVocabulary(int minDocFrequency)
+        {
+            if (ReferenceCounts.TotalCounts != null && ReferenceCounts.TotalCounts.WordCounts.Count != 0)
+                throw new Exception("did not except that ReferenceCounts.TotalCounts contains entries");
+            var wordCounts = ReferenceCounts.DocCounts.WordCounts;
+            var prevWordCount = wordCounts.Count;
+            ReferenceCounts.DocCounts.RemoveEntriesBelowThreshold(minDocFrequency);
+            wordCounts = ReferenceCounts.DocCounts.WordCounts;
+            var numTermsRemoved = prevWordCount - wordCounts.Count;
+           
+            if (numTermsRemoved <= 0)
+                return;
+
+            var pairCounts = ReferenceCounts.DocCounts.PairCounts;
             //also clean word idx dict as it can also grow very large
-            var newIdxMap = new WordIdxMap { TokenizationSettings = settings.TokenizationSettings };
-            var idxToWordList = res.ReferenceIdxMap.IndexToWord;
+            var newIdxMap = new WordIdxMap { TokenizationSettings = ReferenceIdxMap.TokenizationSettings };
+            var idxToWordList = ReferenceIdxMap.IndexToWord;
             var oldIdxToNewIdxMap = new int[idxToWordList.Count];
             for (int i = 0; i < idxToWordList.Count; i++)
             {
@@ -262,13 +284,13 @@ namespace ElskeLib.Utils
                 oldIdxToNewIdxMap[i] = -1;
             }
 
-            res.ReferenceIdxMap = newIdxMap;
+            ReferenceIdxMap = newIdxMap;
             var newWordCounts = new Dictionary<int, int>(wordCounts.Count);
             foreach (var p in wordCounts)
             {
                 newWordCounts.Add(oldIdxToNewIdxMap[p.Key], p.Value);
             }
-            res.ReferenceCounts.DocCounts.WordCounts = newWordCounts;
+            ReferenceCounts.DocCounts.WordCounts = newWordCounts;
             if (pairCounts != null && pairCounts.Count != 0)
             {
                 var newPairCounts = new Dictionary<WordIdxBigram, int>(pairCounts.Count);
@@ -277,15 +299,8 @@ namespace ElskeLib.Utils
                     newPairCounts.Add(new WordIdxBigram(oldIdxToNewIdxMap[p.Key.Idx1], oldIdxToNewIdxMap[p.Key.Idx2]),
                         p.Value);
                 }
-                res.ReferenceCounts.DocCounts.PairCounts = newPairCounts;
+                ReferenceCounts.DocCounts.PairCounts = newPairCounts;
             }
-
-            if (watch != null)
-            {
-                Trace.WriteLine($"{watch.Elapsed} for cleaning ReferenceIdxMap and ReferenceCounts (now {res.ReferenceIdxMap.Count:N0} words)"); watch.Restart();
-            }
-
-            return res;
         }
 
         /// <summary>
@@ -464,6 +479,10 @@ namespace ElskeLib.Utils
                 || ReferenceCounts.DocCounts.PairCounts == null || ReferenceCounts.DocCounts.PairCounts.Count == 0
                 || ReferenceCounts.DocCounts.WordCounts == null || ReferenceCounts.DocCounts.WordCounts.Count == 0)
                 throw new Exception("ReferenceCounts have to contain word and pair counts of a reference collection");
+
+            if(CountRequirements?.MinPhraseDocCount > 0 && ReferenceDocuments == null)
+                throw new Exception("ReferenceDocuments must be set (BuildReferenceCollection = true) for MinPhraseFrequencyInReferenceCollection > 0");
+
 
             var maxIdf = Math.Log(ReferenceCounts.DocCounts.NumDocuments);
             var localCounts = CorpusCounts.GetTotalCountsOnly(documents);
@@ -653,7 +672,7 @@ namespace ElskeLib.Utils
 
             Dictionary<WordSequence, int> phraseCandidates = new Dictionary<WordSequence, int>();
 
-            var phraseMinTfTh = Math.Max(2, minTfTh);
+            var phraseMinTfTh = Math.Max(CountRequirements?.MinPhraseFrequency ?? 1, minTfTh);
             if (Mode >= ExtractingMode.Phrases)
             {
                 phraseCandidates = GetPhraseCandidates(documents, localCounts, phraseMinTfTh);
@@ -1186,8 +1205,56 @@ namespace ElskeLib.Utils
                 }
             }
 
+            var hasCountReq = CountRequirements != null && (
+                CountRequirements.MinUnigramFrequency > 0 ||
+                CountRequirements.MinUnigramDocCount > 0 ||
+                CountRequirements.MinBigramFrequency > 0 ||
+                CountRequirements.MinBigramDocCount > 0 ||
+                CountRequirements.MinPhraseFrequency > 0 ||
+                CountRequirements.MinPhraseDocCount > 0);
+
             return patternsTfIdf
-                .Where(p => p.Value >= tfidfTh)
+                .Where(p =>
+                {
+                    if (p.Value < tfidfTh)
+                        return false;
+                    if (!hasCountReq)
+                        return true;
+                    var tf = patternsTf[p.Key];
+                    switch (p.Key.Indexes.Length)
+                    {
+                        case 1:
+                            if (CountRequirements.MinUnigramFrequency > 0 &&
+                                tf < CountRequirements.MinUnigramFrequency)
+                                return false;
+                            if (CountRequirements.MinUnigramDocCount > 0 &&
+                                ReferenceCounts.DocCounts.WordCounts.GetValueOrDefault(p.Key.Indexes[0]) <
+                                CountRequirements.MinUnigramDocCount)
+                                return false;
+                            return true;
+                        case 2:
+                            if (CountRequirements.MinBigramFrequency > 0 &&
+                                tf < CountRequirements.MinBigramFrequency)
+                                return false;
+                            if (CountRequirements.MinBigramDocCount > 0 &&
+                                ReferenceCounts.DocCounts.PairCounts.GetValueOrDefault(new WordIdxBigram(p.Key.Indexes[0], p.Key.Indexes[1])) <
+                                CountRequirements.MinBigramDocCount)
+                                return false;
+                            return true;
+                        case > 2:
+                            if (CountRequirements.MinPhraseFrequency > 0 &&
+                                tf < CountRequirements.MinPhraseFrequency)
+                                return false;
+                            if (CountRequirements.MinPhraseDocCount > 0 &&
+                                ReferenceDocuments.GetDocumentFrequency(p.Key.Indexes) < CountRequirements.MinPhraseDocCount)
+                                return false;
+                            return true;
+                        default:
+                            return false;
+                    }
+                    
+                    return p.Value >= tfidfTh;
+                })
                 .OrderByDescending(p => p.Value)
                 .Take(numTopPhrases)
                 .Select(p => new PhraseResult(p.Key, patternsTf[p.Key], p.Value,

@@ -46,6 +46,52 @@ namespace ElskeLib.Model
         /// </summary>
         public int Count => _idxToWord.Count;
 
+
+        /// <summary>
+        /// Create WordIdxMap instance and populate it with specified list of tokens.
+        /// Identifier/index of token corresponds to its respective position in the enumeration.
+        /// </summary>
+        /// <param name="tokens">list of words/tokens to initialize the map with</param>
+        /// <returns></returns>
+        public static WordIdxMap FromTokens(IEnumerable<string> tokens)
+        {
+            var res = new WordIdxMap();
+            if (tokens is IList<string> list)
+            {
+                res.IndexToWord.EnsureCapacity(list.Count);
+                res.WordToIndex.EnsureCapacity(list.Count);
+            }
+            foreach (var token in tokens)
+            {
+                res.GetIndexInternal(token.AsMemory());
+            }
+
+            return res;
+        }
+
+
+        /// <summary>
+        /// Create WordIdxMap instance and populate it with specified list of tokens.
+        /// Identifier/index of token corresponds to its respective position in the enumeration.
+        /// </summary>
+        /// <param name="tokens">list of words/tokens to initialize the map with</param>
+        /// <returns></returns>
+        public static WordIdxMap FromTokens(IEnumerable<ReadOnlyMemory<char>> tokens)
+        {
+            var res = new WordIdxMap();
+            if (tokens is IList<ReadOnlyMemory<char>> list)
+            {
+                res.IndexToWord.EnsureCapacity(list.Count);
+                res.WordToIndex.EnsureCapacity(list.Count);
+            }
+            foreach (var token in tokens)
+            {
+                res.GetIndexInternal(token);
+            }
+
+            return res;
+        }
+
         private const string StorageMetaId = "word-idx-map-meta.json";
         private const string StorageBlobId = "word-idx-map.bin";
 
@@ -125,7 +171,7 @@ namespace ElskeLib.Model
                     {
                         var s = reader.ReadString();
                         var v = reader.ReadInt32();
-                        var m = s.AsMemory();
+                        var m = string.IsNullOrEmpty(s) ? ReadOnlyMemory<char>.Empty : s.AsMemory();
                         res._wordToIdx.Add(m, v);
                         res._idxToWord[v] = m;
                     }
@@ -311,6 +357,7 @@ namespace ElskeLib.Model
 
         /// <summary>
         /// Retrieves the token as string that the provided index represents.
+        /// Returns an empty string if the index is out of range.
         /// </summary>
         /// <param name="index"></param>
         /// <returns></returns>
@@ -320,6 +367,7 @@ namespace ElskeLib.Model
             return GetTokenAsMemory(index).ToString();
         }
 
+        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetIndexInternal(ReadOnlyMemory<char> token)
