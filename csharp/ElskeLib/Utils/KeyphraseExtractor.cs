@@ -1454,7 +1454,7 @@ namespace ElskeLib.Utils
                         if (onlyStopWords || patternTemp.Count < 3)
                             continue;
 
-                        var pattern = patternRecycling.RetrieveOrCreate((int)patternHashCode, patternTemp);
+                        var pattern = patternRecycling.RetrieveOrCreate(unchecked((int)patternHashCode), patternTemp);
                         phraseCandidates.IncrementItem(pattern);
                     }
                 }
