@@ -1419,7 +1419,7 @@ namespace ElskeLib.Utils
 
                     var val = arr[i];
                     patternTemp.Add(val);
-                    patternHashCode = ((uint)val).ToFnv1_32(patternHashCode);
+                    patternHashCode = (unchecked((uint)val)).ToFnv1_32(patternHashCode);
 
                     if (!_stopWordsSet.Contains(val))
                     {
@@ -1443,7 +1443,7 @@ namespace ElskeLib.Utils
 
                         val = arr[j];
                         patternTemp.Add(val);
-                        patternHashCode = ((uint)val).ToFnv1_32(patternHashCode);
+                        patternHashCode = unchecked ((uint)val).ToFnv1_32(patternHashCode);
 
                         if (!_stopWordsSet.Contains(val))
                         {

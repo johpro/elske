@@ -341,12 +341,15 @@ namespace ElskeLib.Model
             bool lockTaken = false;
             try
             {
-                _spinLock.Enter(ref lockTaken);
-                if ((uint)index >= (uint)_idxToWord.Count)
-                    return ReadOnlyMemory<char>.Empty;
-                //there should not be a second range check
-                //as the compiler should optimize it away after inlining
-                return _idxToWord[index];
+                unchecked
+                {
+                    _spinLock.Enter(ref lockTaken);
+                    if ((uint)index >= (uint)_idxToWord.Count)
+                        return ReadOnlyMemory<char>.Empty;
+                    //there should not be a second range check
+                    //as the compiler should optimize it away after inlining
+                    return _idxToWord[index];
+                }
             }
             finally
             {

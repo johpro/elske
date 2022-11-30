@@ -35,7 +35,7 @@ namespace ElskeLib
             {
                 for (int i = 0; i < source.Count; i++)
                 {
-                    hash ^= (uint)source[i];
+                    hash ^= unchecked((uint)source[i]);
                     hash *= Fnv1Prime32;
                 }
                 return hash;
@@ -86,7 +86,7 @@ namespace ElskeLib
                     var count = source.Count;
                     for (int i = 0; i < count; i++)
                     {
-                        hash ^= (uint)arr[i];
+                        hash ^= unchecked((uint)arr[i]);
                         hash *= Fnv1Prime32;
                     }
                 }
